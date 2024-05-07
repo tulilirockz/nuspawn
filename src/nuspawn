@@ -1,0 +1,19 @@
+#!/usr/bin/env -S nu --stdin
+
+use lib/mod.nu *
+
+# Display nuspawn version
+def "main version" [] {
+  $"($NAME) ($VERSION)-($GIT_COMMIT)"
+}
+
+# Fetch images for systemd-nspawn.
+# To get started, try out nuspawn init debian/sid/raw
+def "main" [] {
+  $"Usage: ($NAME) <command>...
+
+Fetch images for systemd-nspawn.
+
+To get started, try out nuspawn init debian/sid/raw"
+}
+
