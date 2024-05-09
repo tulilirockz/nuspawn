@@ -25,7 +25,7 @@ export def --env "main init" [
   let nspawnhub_gpg_path = $"($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")/nuspawn/nspawnhub.gpg"
   let nuspawn_cache = $"($env.XDG_CACHE_HOME? | default $"($env.HOME)/.cache")/nuspawn"
 
-  if not ($nspawnhub_gpg_path | path exists) {
+  if (not ($nspawnhub_gpg_path | path exists)) and ($verify == "gpg")  {
     fancy_print "Could not find nspawnhub's GPG keys"
     let yesno = (input $"(ansi blue_bold)Do you wish to fetch them? [y/n]: (ansi reset)")
 
