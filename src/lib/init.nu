@@ -1,15 +1,5 @@
-use meta.nu [NAME]
-
-const NSPAWNHUB_KEY_LOCATION = "https://hub.nspawn.org/storage/masterkey.pgp" 
-const NSPAWNHUB_STORAGE_ROOT = "https://hub.nspawn.org/storage"
-
-def fancy_print [...data: string] {
-  print $"(ansi blue_bold)[($NAME)] (echo ...$data)(ansi reset)"
-}
-
-def fancy_error [...data: string] {
-  print $"(ansi blue_bold)[($NAME)] (echo ...$data)(ansi reset)"
-}
+use logger.nu *
+use meta.nu [NSPAWNHUB_KEY_LOCATION, NSPAWNHUB_STORAGE_ROOT]
 
 # Import tar/raw images to machinectl from nspawnhub or any other registry.
 #
@@ -20,13 +10,15 @@ export def --env "main init" [
   --config (-c): string # Path for the nspawn config to be copied to /var/lib/machines
   --override (-o) # Overrides the existing machine in storage
   --override-config # Overrides the existing configuration for the container
-  init: string
+  --type (-t): string = "tar" # Type of machine (Raw or Tarball) 
+  distro: string = "debian"
+  release: string = "sid"
 ] {
   let nspawnhub_gpg_path = $"($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")/nuspawn/nspawnhub.gpg"
   let nuspawn_cache = $"($env.XDG_CACHE_HOME? | default $"($env.HOME)/.cache")/nuspawn"
 
   if (not ($nspawnhub_gpg_path | path exists)) and ($verify == "gpg")  {
-    fancy_print "Could not find nspawnhub's GPG keys"
+    logger print "Could not find nspawnhub's GPG keys"
     let yesno = (input $"(ansi blue_bold)Do you wish to fetch them? [y/n]: (ansi reset)")
 
     match $yesno {
@@ -34,7 +26,7 @@ export def --env "main init" [
       _ => { return }
     }
     
-    fancy_print "Fetching..."
+    logger print "Fetching Nspawnhub keys..."
     mkdir ($nspawnhub_gpg_path | path dirname)
     mkdir $"($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")/gnupg" # prevent gnupg from being annoying
     run-external 'gpg' '--no-default-keyring' $"--keyring=($nspawnhub_gpg_path)" '--fingerprint'
@@ -44,9 +36,8 @@ export def --env "main init" [
     run-external 'gpg' '--no-default-keyring' $"--keyring=($nspawnhub_gpg_path)" '--import' $"($tfile)" 
   }
   
-  let userdata = ($init | split column "/" DISTRO RELEASE TYPE)
-  let image = $"($NSPAWNHUB_STORAGE_ROOT)/($userdata.DISTRO.0)/($userdata.RELEASE.0)/($userdata.TYPE.0)/image.($userdata.TYPE.0).xz"
-  mut output_image = $"($userdata.DISTRO.0)-($userdata.RELEASE.0)-($userdata.TYPE.0)"
+  let image = $"($NSPAWNHUB_STORAGE_ROOT)/($distro)/($release)/($type)/image.($type).xz"
+  mut output_image = $"($distro)-($release)-($type)"
   if $name != null {
     $output_image = $name
   }
@@ -54,24 +45,22 @@ export def --env "main init" [
   try {
     http head $image | ignore
   } catch {
-    fancy_print "Failed fetching image, try checking images with nuspawn list"
+    logger print "Failed fetching image, try checking images with nuspawn list"
     return
   }
 
   if ((run-external 'machinectl' 'show-image' $output_image | complete | get exit_code) != 1) {
     if not $override {
-      fancy_print "Image is already in storage, exiting."
+      logger print "Image is already in storage, exiting."
       run-external 'machinectl' 'show-image' $output_image
       return 
     } 
 
-    fancy_print 'Deleting existing image'
+    logger print 'Deleting existing image'
     run-external 'machinectl' 'remove' $output_image
   } 
-
-  fancy_print $"Pulling the image via machinectl pull-($userdata.TYPE.0)"
   if $config != null {
-    log debug "Applied configuration to /var/lib/machines."
+    logger print "Applied configuration to /var/lib/machines."
     let nspawn_config = $"/var/lib/machines/($output_image).nspawn" 
     if not ($output_image | path exists) or $override_config {
       pkexec cp $config $nspawn_config
@@ -80,20 +69,22 @@ export def --env "main init" [
     }
   }
 
+
+  logger print $"Pulling the image via machinectl pull-($type)"
   try {
-    run-external 'machinectl' $"pull-($userdata.TYPE.0)" $"($image)" $"($output_image)" $"--verify=($verify)"
+    run-external 'machinectl' $"pull-($type)" $"($image)" $"($output_image)" $"--verify=($verify)"
   } catch {
-    fancy_error $"Failure when fetching image, most likely a network error."
+    logger error $"Failure when fetching image, most likely a network error."
     return
   }
 
-  fancy_print "Removing read-only attribute from image"
+  logger print "Removing read-only attribute from image"
   try {
     run-external 'machinectl' 'read-only' $"($output_image)" 'false'
   } catch {
-    fancy_error "Failed setting image as writable"
+    logger error "Failed setting image as writable"
   }
 
-  fancy_print "All done! This is your new machine:"
+  logger print "All done! This is your new machine:"
   run-external 'machinectl' 'show-image' $"($output_image)"
 }

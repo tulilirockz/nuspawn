@@ -1,5 +1,5 @@
 # Lists the current nspawnhub images in a fancy table
-export def "main list" [] {
+export def "main remote-list" [] {
   const NSPAWNHUB_LIST = "https://hub.nspawn.org/storage/list.txt"
   http get $NSPAWNHUB_LIST
     | str replace -a "nspawn -i" "nuspawn init"

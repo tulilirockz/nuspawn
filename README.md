@@ -11,8 +11,10 @@ If you are trying to run your container and cant seem to get networking working,
 The CLI usage is still a WIP, but for now, it should work just like the nspawn wrapper.
 Make sure to check `nuspawn --help` for more up-to-date information about the CLI
 
+### Init
+
 ```bash
-nuspawn list # Table of all the available distros
+nuspawn remote list # Table of all the available distros
 
 # This should be the minimum necessary to pull your image, from there you can use machinectl.
 nuspawn init debian/sid/tar 
@@ -20,8 +22,10 @@ machinectl start debian-sid-tar
 machinectl login debian-sid-tar
 
 # Advanced usage example: Importing a nspawn configuration to the container and verifiying using the nspawnhub gpg key
-nuspawn init debian/sid/tar --name "mydebbox" --config=./distrobox-like.nspawn --verify=gpg
+nuspawn init debian sid --name "mydebbox" --config=./distrobox-like.nspawn --verify=gpg
 ```
+
+### Remote commands
 
 ## Installing
 
