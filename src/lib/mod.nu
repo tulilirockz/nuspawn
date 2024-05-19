@@ -3,6 +3,6 @@ export use list.nu *
 export use meta.nu *
 export use fetch.nu *
 export use prune.nu *
-#export use config.nu *
-#export use template.nu *
-#export use assemble.nu *
+export use config.nu *
+export use template.nu *
+export use assemble.nu *

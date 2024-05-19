@@ -20,7 +20,7 @@ export def --env "main init" [
   let nuspawn_cache = $"($env.XDG_CACHE_HOME? | default $"($env.HOME)/.cache")/nuspawn"
 
   if (not ($nspawnhub_gpg_path | path exists)) and ($verify == "gpg")  {
-    logger print "Could not find nspawnhub's GPG keys"
+    logger error "Could not find nspawnhub's GPG keys"
     let yesno = (input $"(ansi blue_bold)Do you wish to fetch them? [y/n]: (ansi reset)")
 
     match $yesno {
@@ -28,7 +28,7 @@ export def --env "main init" [
       _ => { return }
     }
     
-    logger print "Fetching Nspawnhub keys..."
+    logger info "Fetching Nspawnhub keys..."
     mkdir ($nspawnhub_gpg_path | path dirname)
     mkdir $"($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")/gnupg" # prevent gnupg from being annoying
     run-external 'gpg' '--no-default-keyring' $"--keyring=($nspawnhub_gpg_path)" '--fingerprint'

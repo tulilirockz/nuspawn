@@ -1,4 +1,14 @@
-# NuSpawn
+```
+888888ba           .d88888b                                           8b
+88    `8b          88.    "'                                          `8b
+88     88 dP    dP `Y88888b. 88d888b. .d8888b. dP  dP  dP 88d888b.     `8b
+88     88 88    88       `8b 88'  `88 88'  `88 88  88  88 88'  `88     .8P
+88     88 88.  .88 d8'   .8P 88.  .88 88.  .88 88.88b.88' 88    88    .8P
+dP     dP `88888P'  Y88888P  88Y888P' `88888P8 8888P Y8P  dP    dP    8P
+                             88
+                             dP
+```
+===
 
 A Nushell wrapper over systemd-nspawn and machinectl pull with inspired by the the [nspawn](https://github.com/nspawn/nspawn/tree/master) nspawnhub wrapper script.
 
@@ -11,13 +21,18 @@ If you are trying to run your container and cant seem to get networking working,
 The CLI usage is still a WIP, but for now, it should work just like the nspawn wrapper.
 Make sure to check `nuspawn --help` for more up-to-date information about the CLI
 
+
+- ASCIINEMA HERE
+
+### Managing your machines
+
 ### Init
 
 ```bash
 nuspawn remote list # Table of all the available distros
 
 # This should be the minimum necessary to pull your image, from there you can use machinectl.
-nuspawn init debian/sid/tar 
+nuspawn init 
 machinectl start debian-sid-tar
 machinectl login debian-sid-tar
 
@@ -25,7 +40,7 @@ machinectl login debian-sid-tar
 nuspawn init debian sid --name "mydebbox" --config=./distrobox-like.nspawn --verify=gpg
 ```
 
-### Remote commands
+### Managing configurations
 
 ## Installing
 
