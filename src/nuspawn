@@ -1,6 +1,6 @@
 #!/usr/bin/env -S nu --stdin
 
-use lib/mod.nu *
+use ./lib *
 
 # Display nuspawn version
 def "main version" [
@@ -20,16 +20,11 @@ dP     dP `88888P   Y88888P  88Y888P   88888P8 8888P Y8P  dP    dP    8P
   $"($NAME) ($VERSION)-($GIT_COMMIT)"
 }
 
-# Display logo!
-def "main logo" [] {
-  
-}
-
-# Fetch images for systemd-nspawn.
+# Helper for systemd-nspawn.
 def "main" [] {
   $"Usage: ($NAME) <command>...
 
-Fetch images for systemd-nspawn.
+Helper for systemd-nspawn.
 
 To get started, try out nuspawn init"
 }

@@ -1,0 +1,19 @@
+version: '3'
+
+vars:
+  CONTAINER_MANAGER: docker
+
+tasks:
+  build:rpm:
+    desc: Builds an RPM package in the /output directory
+    cmds:
+      - mkdir -p {{.OUTPUT_FOLDER}}
+      - "{{.CONTAINER_MANAGER}} buildx build --build-arg=SPEC_FILE=nuspawn.spec -f rpm.Containerfile ."
+    vars:
+      OUTPUT_FOLDER: output
+      SPEC_FILE: nuspawn.spec
+  build:deb:
+    desc: Builds an DEB package in the /output directory
+    cmds:
+      - "{{.CONTAINER_MANAGER}} buildx build -f deb.Containerfile ."
+    

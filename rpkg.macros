@@ -1,0 +1,7 @@
+function git_ref {
+    if [ "$GITHUB_REF_NAME" = "" ]; then
+        echo "$(git rev-parse --short HEAD)"
+    else
+        echo "$GITHUB_REF_NAME" 
+    fi
+}

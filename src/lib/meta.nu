@@ -1,7 +1,6 @@
 export const NAME = "nuspawn"
 export const VERSION = "%VERSION%"
 export const GIT_COMMIT = "%GIT_COMMIT%"
-export const TEMPLATE_DIRECTORY = "%TEMPLATE_DIR%"
 export const NSPAWNHUB_KEY_LOCATION = "https://hub.nspawn.org/storage/masterkey.pgp" 
 export const NSPAWNHUB_STORAGE_ROOT = "https://hub.nspawn.org/storage"
 export const MACHINE_STORAGE_PATH = "/var/lib/machines"
