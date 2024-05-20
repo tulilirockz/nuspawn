@@ -1,0 +1,37 @@
+# Version is required due to future breaking changes, it will not let you use old versions on newer versions, not letting you just break the application
+version: '0.5'
+
+# Array of machine objects
+machines: 
+  - name: debox
+    image: debian
+    tag: sid
+    type: raw
+    env:
+      - DEBIAN_FRONTEND=noninteractive
+    init_commands: 
+      - rm -f /etc/apt/apt.conf.d/docker-gzip-indexes /etc/apt/apt.conf.d/docker-no-languages
+      - apt update -y && apt upgrade -y 
+      - apt install -y cockpit
+    inline_config: |
+      [Network]
+      VirtualEthernet=no    
+    properties:
+      - MaxQuota=200
+      - MaxMemory=2G
+  - name: bantic
+    image: ubuntu
+    tag: mantic
+    type: raw
+    env:
+      - DEBIAN_FRONTEND=noninteractive
+    init_commands: 
+      - rm -f /etc/apt/apt.conf.d/docker-gzip-indexes /etc/apt/apt.conf.d/docker-no-languages
+      - apt update -y && apt upgrade -y 
+      - apt install -y cockpit
+    inline_config: |
+      [Network]
+      VirtualEthernet=no    
+    properties:
+      - MaxQuota=200
+      - MaxMemory=2G

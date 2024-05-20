@@ -1,9 +1,7 @@
 use logger.nu *
-use meta.nu [NSPAWNHUB_KEY_LOCATION, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH]
+use meta.nu [NSPAWNHUB_KEY_LOCATION, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH]
 
 # Import tar/raw images to machinectl from nspawnhub or any other registry.
-#
-# Image format should be DISTRO/RELEASE/TYPE. E.G: debian/sid/tar
 export def --env "main init" [
   --verify (-v): string = "checksum" # The type of verification ran on the images 
   --name (-n): string # Name of the image imported to machinectl
@@ -12,7 +10,8 @@ export def --env "main init" [
   --override-config = true # Overrides the existing configuration for the container
   --type (-t): string = "raw" # Type of machine (Raw or Tarball)
   --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
-  --machine-storage: string = $MACHINE_STORAGE_PATH # Local storage path for Nspawn machines 
+  --storage-root: string = $MACHINE_STORAGE_PATH # Local storage path for Nspawn machines 
+  --config-root: string = $MACHINE_CONFIG_PATH # Local storage path for Nspawn machines 
   image: string = "debian"
   tag: string = "sid"
 ] {
@@ -38,16 +37,16 @@ export def --env "main init" [
     run-external 'gpg' '--no-default-keyring' $"--keyring=($nspawnhub_gpg_path)" '--import' $"($tfile)" 
   }
   
-  let image = $"($nspawnhub_url)/($image)/($tag)/($type)/image.($type).xz"
+  let full_image_name = $"($nspawnhub_url)/($image)/($tag)/($type)/image.($type).xz"
   mut output_image = $"($image)-($tag)-($type)"
   if $name != null {
     $output_image = $name
   }
 
   try {
-    http head $image | ignore
+    http head $full_image_name | ignore
   } catch {
-    logger error "Failed finding image in storage, check if image is valid"
+    logger error "Failure finding image in storage, check if image is valid"
     return
   }
 
@@ -64,7 +63,7 @@ export def --env "main init" [
   
   if $config != null {
     logger info "Applying configuration to machine."
-    let nspawn_config = $"($machine_storage)/($output_image).nspawn"
+    let nspawn_config = $"($config_root)/($output_image).nspawn"
     try { 
       if not ($output_image | path exists) or $override_config {
         cp $config $nspawn_config
@@ -80,7 +79,7 @@ export def --env "main init" [
 
   logger info $"Pulling image ($image) tag ($tag)"
   try {
-    run-external 'machinectl' $"pull-($type)" $"--verify=($verify)" $"($image)" $"($output_image)" 
+    run-external 'machinectl' $"pull-($type)" $"--verify=($verify)" $"($full_image_name)" $"($output_image)" 
   } catch {
     logger error $"Failure when fetching image"
     return
@@ -90,7 +89,7 @@ export def --env "main init" [
   try {
     run-external 'machinectl' 'read-only' $"($output_image)" 'false'
   } catch {
-    logger error "Failed setting image as writable"
+    logger error "Failure setting image as writable"
   }
 
   logger success "All done! This is your new machine:"

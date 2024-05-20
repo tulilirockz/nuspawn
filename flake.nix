@@ -1,10 +1,7 @@
 {
   description = "Nspawn wrapper for fetching tarballs from nspawnhub";
-  inputs = {
-    flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*.tar.gz";
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.0.tar.gz";
-  };
-  outputs = { self, flake-schemas, nixpkgs }:
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+  outputs = { self, nixpkgs }:
     let
       supportedSystems = [ "x86_64-linux" "aarch64-darwin" "x86_64-darwin" "aarch64-linux" ];
       forEachSupportedSystem = f: nixpkgs.lib.genAttrs supportedSystems (system: f {
@@ -28,8 +25,6 @@
           '';
         };
       });
-
-      schemas = flake-schemas.schemas;
       formatter = forEachSupportedSystem ({ pkgs }: pkgs.nixfmt-rfc-style);
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {        
