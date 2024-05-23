@@ -26,7 +26,7 @@ export def "main list" [
   try {
     ls -l $target | select name readonly type created
   } catch {
-    logger error $"Failed listing images, your user should have permissions over the ($target) folder. Try running as root"
+    logger error $"Failure listing machines due to permission issues"
     return
   }
 }

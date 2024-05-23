@@ -10,7 +10,9 @@ dP     dP `88888P'  Y88888P  88Y888P' `88888P8 8888P Y8P  dP    dP    8P
 ```
 ---
 
-A [Nushell](https://nushell.sh) wrapper over systemd-nspawn and machinectl initially inspired by the the [nspawn](https://github.com/nspawn/nspawn/tree/master) nspawnhub wrapper script.
+[![Copr build status](https://copr.fedorainfracloud.org/coprs/tulilirockz/nuspawn/package/nuspawn/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/tulilirockz/nuspawn/package/nuspawn/)
+
+A [Nushell](https://nushell.sh) wrapper over systemd-nspawn and machinectl initially inspired by the the [nspawn](https://github.com/nspawn/nspawn/tree/master) nspawnhub wrapper script meant to make usage easier and more integrated with [nspawn.org](https://nspawn.org/) (nspawnhub)
 
 We aim to make this as self-contained with as few dependencies as possible, using just the [nushell](https://nushell.sh) and few binaries like [machinectl](https://www.freedesktop.org/software/systemd/man/latest/machinectl.html), [gpg](https://www.gnupg.org/) and GNU tar (optionally).
 
@@ -27,7 +29,7 @@ machinectl start debian-sid-tar
 machinectl login debian-sid-tar
 
 # Advanced usage example: Importing a nspawn configuration to the container and verifiying using the nspawnhub gpg key
-nuspawn init debian sid --name "mydebbox" --config=./distrobox-like.nspawn
+nuspawn init debian sid --name "mydebbox" --config=./distrobox-like.nspawn.ini
 ```
 
 ### Composing machines
@@ -75,16 +77,6 @@ nuspawn config show debox # Shows every property specified in your configuration
 nuspawn config remove debox # Removes any configuration set for `systemd-nspawn@debox.service`
 ```
 
-### Prune
-
-Deletes every image from your system, including configurations if specified.
-
-```bash
-~/opt/tulilirockz/nuspawn/src> nuspawn prune
-[nuspawn] THIS COMMAND WILL CLEAR ALL IMAGES IN LOCAL STORAGE, type YES if you agree to delete everything
-Do you wish to delete all your local images? [N]:
-```
-
 ### Inspecting images
 
 You can fetch images locally without adding them to the systemd-nspawn machine directory by using `nuspawn fetch`
@@ -98,15 +90,41 @@ nuspawn fetch --type=raw debian sid .
 systemd-dissect ./debian-sid-raw.raw
 ```
 
+
+### Deleting machines
+
+```bash
+~/opt/tulilirockz/nuspawn/src> nuspawn remove debox
+Do you wish to delete all your local images? [N]:
+```
+
+You can also Prune, which will delete every image from your system, including configurations if specified.
+
+```bash
+~/opt/tulilirockz/nuspawn/src> nuspawn prune
+[nuspawn] THIS COMMAND WILL CLEAR ALL IMAGES IN LOCAL STORAGE, type YES if you agree to delete everything
+Do you wish to delete all your local images? [N]:
+```
+
 ## Installing
+
+Most of the packaging is still yet to be done, tracking issue at #3
 
 ### Fedora/OpenSUSE/RHEL (RPM)
 
-Available in [my COPR @ `tulilirockz/nuspawn`](https://copr.fedorainfracloud.org/tulilirockz)!
+Available in [my COPR @ `tulilirockz/nuspawn`](https://copr.fedorainfracloud.org/tulilirockz/nuspawn)!
 
 ### Debian/Ubuntu (DEB)
 
 TODO!
+
+### Arch Linux (PKGBUILD)
+
+TODO!
+
+### Alpine Linux / Chimera / PostmarketOS (APK)
+
+TODO! (maybe), since like... they dont exactly have systemd in them, right?
 
 ### NixOS/Nix (Nix)
 
@@ -144,7 +162,7 @@ You should be able to install this project by using the `install.nu` script on y
 curl -fsSL "https://raw.githubusercontent.com/tulilirockz/nuspawn/main/install.nu" | nu
 ```
 
-It is NOT recommended to do that, though.
+It is NOT recommended to do that, though!
 
 ## Known Issues
 

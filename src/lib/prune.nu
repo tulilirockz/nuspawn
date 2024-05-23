@@ -5,13 +5,14 @@ use logger.nu *
 export def "main prune" [
   --storage-root = $MACHINE_STORAGE_PATH # Place where all images are located (WARNING: will delete everything there!) 
   --config-root = $MACHINE_CONFIG_PATH # Place where all images are located (WARNING: will delete everything there!) 
+  --clean = true # Clean hidden files with machinectl
   --no-warning # Do not warn that this will delete everything from local storage
 ] -> null {
   if not $no_warning {
     logger warning "THIS COMMAND WILL CLEAR ALL IMAGES IN LOCAL STORAGE, type YES if you agree to delete everything"
     try {
-    ls -a $storage_root
-    ls -a $config_root
+      ls -a $storage_root
+      ls -a $config_root
     } catch {
       logger error "Failure displaying files to be deleted due to permission errors"
       return
@@ -28,7 +29,10 @@ export def "main prune" [
   try {
     # I dislike this pattern as much as the next person, but I really dont know how to make this work properly 
     # TODO: Make this better somehow
-    print ...(glob $"($storage_root)/*") ...(glob $"($config_root)/*")
+    rm -rifv ...(glob $"($storage_root)/*") ...(glob $"($config_root)/*")
+    if $clean {
+      machinectl clean
+    }
   } catch {
     logger error "Failure deleting local storage images due to permission errors"
     return

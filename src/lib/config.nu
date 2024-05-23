@@ -3,7 +3,7 @@ use logger.nu *
 
 const CONFIG_EXTENSION = "nspawn"
 
-def get_config_path [config_root: string, machine_name: string, extension: string = $CONFIG_EXTENSION] {
+export def get_config_path [config_root: string, machine_name: string, extension: string = $CONFIG_EXTENSION] {
   return $"($config_root)/($machine_name).($extension)"
 }
 
