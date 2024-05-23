@@ -1,0 +1,33 @@
+version: '0.5'
+
+machines: 
+  - name: debox
+    image: debian
+    tag: sid
+    type: tar
+    env:
+      - DEBIAN_FRONTEND=noninteractive
+    init_commands:
+      - rm -f /etc/apt/apt.conf.d/docker-gzip-indexes /etc/apt/apt.conf.d/docker-no-languages
+      - sed -Ei 's/^(hosts:.*)(\<files\>)\s*(.*)/\1\2 myhostname \3/' /etc/nsswitch.conf
+      - apt update -y && apt upgrade -y 
+      - apt install -y bash-completion bc bzip2 diffutils findutils flatpak-xdg-utils git gnupg gpgsm hostname iproute2 iputils-tracepath keyutils less libcap2-bin libkrb5-3 libnss-mdns lsof man-db manpages mtr nano openssh-client passwd pigz procps rsync sudo tcpdump time traceroute tree unzip util-linux wget xauth xz-utils zip fuse-overlayfs 
+      - sed -i -e 's/ ALL$/ NOPASSWD:ALL/' /etc/sudoers
+      - echo VARIANT_ID=container >> /etc/os-release
+    inline_config: |
+      [Network]
+      VirtualEthernet=no
+      [Exec]
+      Boot=yes
+      Environment=DISPLAY=:0
+      Environment=TERM=xterm-256color
+      Environment=WAYLAND_DISPLAY=wayland-1
+      Environment=XDG_RUNTIME_DIR=/run/user/1000
+      SystemCallFilter=add_key keyctl bpf
+      [Files]
+      Bind=/home:/home
+      Bind=/dev/fuse:/dev/fuse
+      BindReadOnly=/run/user:/run/user
+      Bind=/dev/dri:/dev/dri
+    #properties:
+    #  - DeviceAllow='/dev/fuse rwm'

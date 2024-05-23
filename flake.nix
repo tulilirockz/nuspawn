@@ -20,7 +20,7 @@
           buildCommand = ''
             mkdir -p $out/bin $out/lib
             cp $src/src/${pname} $out/bin
-            substituteInPlace $out/bin/${pname} --replace 'lib/' "$out/lib/"
+            substituteInPlace $out/bin/${pname} --replace './lib' "$out/lib/"
             cp -r $src/src/lib/* $out/lib
           '';
         };

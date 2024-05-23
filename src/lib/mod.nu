@@ -6,3 +6,4 @@ export use prune.nu *
 export use config.nu *
 export use compose.nu *
 export use remove.nu *
+export use run.nu *

@@ -1,5 +1,6 @@
 use logger.nu *
 use meta.nu [NSPAWNHUB_KEY_LOCATION, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH]
+use std assert
 
 # Import tar/raw images to machinectl from nspawnhub or any other registry.
 export def --env "main init" [
@@ -8,17 +9,18 @@ export def --env "main init" [
   --config (-c): string # Path for the nspawn config to be copied to /var/lib/machines
   --override (-o) # Overrides the existing machine in storage
   --override-config = true # Overrides the existing configuration for the container
-  --type (-t): string = "raw" # Type of machine (Raw or Tarball)
+  --type (-t): string = "tar" # Type of machine (Raw or Tarball)
   --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
   --storage-root: string = $MACHINE_STORAGE_PATH # Local storage path for Nspawn machines 
-  --config-root: string = $MACHINE_CONFIG_PATH # Local storage path for Nspawn machines 
-  image: string = "debian"
-  tag: string = "sid"
+  --config-root: string = $MACHINE_CONFIG_PATH # Local storage path for Nspawn machines
+  --from-url (-u): string # Fetch image from URL instead of NspawnHub
+  image?: string = "debian"
+  tag?: string = "sid"
 ] {
   let nspawnhub_gpg_path = $"($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")/nuspawn/nspawnhub.gpg"
   let nuspawn_cache = $"($env.XDG_CACHE_HOME? | default $"($env.HOME)/.cache")/nuspawn"
 
-  if (not ($nspawnhub_gpg_path | path exists)) and ($verify == "gpg")  {
+  if ($verify == "gpg") and (not ($nspawnhub_gpg_path | path exists)) {
     logger error "Could not find nspawnhub's GPG keys"
     let yesno = (input $"(ansi blue_bold)Do you wish to fetch them? [y/n]: (ansi reset)")
 
@@ -43,10 +45,15 @@ export def --env "main init" [
     $output_image = $name
   }
 
+  
   try {
-    http head $full_image_name | ignore
+    if $from_url == null {
+      http head $full_image_name | ignore
+    } else {
+      http head $from_url | ignore
+    }
   } catch {
-    logger error "Failure finding image in storage, check if image is valid"
+    logger error "Failure finding remote image, check if image is valid"
     return
   }
 
@@ -77,11 +84,16 @@ export def --env "main init" [
   }
 
 
-  logger info $"Pulling image ($image) tag ($tag)"
   try {
-    run-external 'machinectl' $"pull-($type)" $"--verify=($verify)" $"($full_image_name)" $"($output_image)" 
+    if $from_url != null {
+      logger info $"Pulling image from URL ($from_url)"  
+      run-external 'machinectl' $"pull-($type)" $"--verify=($verify)" $"($from_url)" $"($output_image)" 
+    } else {
+      logger info $"Pulling image ($image) tag ($tag)"
+      run-external 'machinectl' $"pull-($type)" $"--verify=($verify)" $"($full_image_name)" $"($output_image)" 
+    }
   } catch {
-    logger error $"Failure when fetching image"
+    logger error "Failure when fetching image"
     return
   }
 
@@ -93,6 +105,5 @@ export def --env "main init" [
   }
 
   logger success "All done! This is your new machine:"
-  # TODO: Make this look even fancier!
-  run-external 'machinectl' 'show-image' $"($output_image)" | lines | str trim | split column "=" Property Value
+  run-external 'machinectl' 'show-image' $"($output_image)" | lines | str trim
 }

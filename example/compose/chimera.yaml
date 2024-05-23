@@ -1,0 +1,17 @@
+version: '0.5'
+
+machines: 
+  - name: chimera
+    type: tar
+    from-url: https://repo.chimera-linux.org/live/latest/chimera-linux-x86_64-ROOTFS-20240421-minimal.tar.gz
+    verify: no
+    systemd: false
+    init_commands:
+      - printf "https://repo.chimera-linux.org/current/contrib\nhttps://repo.chimera-linux.org/current/user" > /etc/apk/repositories.d/01-additional-repos.list
+      - apk update && apk upgrade --no-interactive
+      - apk add --no-interactive fastfetch
+    inline_config: |
+      [Network]
+      VirtualEthernet=no
+      [Exec]
+      ProcessTwo=yes
