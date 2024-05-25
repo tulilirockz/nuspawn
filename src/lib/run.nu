@@ -1,4 +1,0 @@
-# 
-export def "main run" [] {
-
-}

@@ -1,8 +1,7 @@
 use meta.nu [NAME, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH]
 use logger.nu *
 use std assert
-
-const CONFIG_EXTENSION = "nspawn"
+use machine_manager.nu [CONFIG_EXTENSION, run_container]
 
 # Compose Nspawn machines from YAML
 export def "main compose" [] {
@@ -11,15 +10,15 @@ export def "main compose" [] {
 
 # Create new machines from YAML manifest
 export def --env "main compose create" [
-  --storage-root: string = $MACHINE_STORAGE_PATH # Storage root for machines
-  --config-root: string = $MACHINE_CONFIG_PATH # Configuration path for machines
+  --nspawnhub-url: path = $NSPAWNHUB_STORAGE_ROOT # Fallback NspawnHub URL for images 
+  --storage-root: path = $MACHINE_STORAGE_PATH # Storage root for machines
+  --config-root: path = $MACHINE_CONFIG_PATH # Configuration path for machines
   --override-config = true # Whether to override an existing machine configuration if it is already configured
   --override # Override existing machines
   --config: string # Fallback configuration for all images
   --user: string = "root" # Default user to operate on machine
   --verify (-v): string = "checksum" # Fallback mode to verify images once pulled 
-  --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # Fallback NspawnHub URL for images 
-  manifest: string # Manifest to be used
+  manifest: path # Manifest to be used
 ] {
   let manifest_data = (open $manifest)
   if $manifest_data.version != "0.5" {
@@ -37,7 +36,7 @@ export def --env "main compose create" [
   assert ($manifest_data.machines != null)
   for machine in $manifest_data.machines {
     try {
-      if (($"($storage_root)/($machine.name)" | path exists) or ($"($storage_root)/($machine.name).raw" | path exists)) and (not $override) {
+      if (not $override) and (($"($storage_root)/($machine.name)" | path exists) or ($"($storage_root)/($machine.name).raw" | path exists)) {
         logger warning $"[($machine.name)] Machine is already initialized, skipping"
         continue
       }
@@ -48,7 +47,19 @@ export def --env "main compose create" [
 
     assert ($machine.name != null) "Your machine must have a name"
     
-    main init --nspawnhub-url=($machine.nspawnhub_url? | default $nspawnhub_url) --verify=($machine.verify? | default $verify) --name=($machine.name) --config=($machine.config? | default $config) --config-root=($config_root) --storage-root=($storage_root) --from-url=($machine.from-url?) --override=($override) $machine.image? $machine.tag?
+    (main 
+      init 
+      --nspawnhub-url=($machine.nspawnhub_url? | default $nspawnhub_url) 
+      --verify=($machine.verify? | default $verify) 
+      --from-url=($machine.from-url?)
+      --nspawn=(not $machine.systemd? | default true)
+      --name=($machine.name) --config=($machine.config? | default $config) 
+      --config-root=($config_root) 
+      --storage-root=($storage_root) 
+      --override=($override)
+      $machine.image? 
+      $machine.tag?
+    )
     
     let machine_config_path = $"($config_root)/($machine.name).($CONFIG_EXTENSION)"
     if $machine.config? != null {
@@ -71,16 +82,8 @@ export def --env "main compose create" [
         continue
       }
     }
-    if $machine.init_commands? != null {
-      if ($machine.systemd? | default false) {
-        run-external 'systemd-nspawn' '-M' $'($machine.name)' '/usr/bin/env' $"($machine.env? | default "PATH=/usr/bin:/usr/local/bin:/bin" | str join ' ')" '/bin/sh' '-c' $"($machine.init_commands | str join ' ; ')" 
-        continue
-      }
-    
-      run-external 'machinectl' 'start' $'($machine.name)'
-      sleep 2sec
-      run-external 'machinectl' 'shell' $"($user)@($machine.name)" '/usr/bin/env' $"($machine.env? | default "PATH=/usr/bin:/usr/local/bin:/bin" | str join ' ')" '/bin/sh' '-c' $"($machine.init_commands | str join ' ; ')"
-      run-external 'machinectl' 'stop' $'($machine.name)'
+    if $machine.init_commands? != null {    
+      run_container --nspawn=(not $machine.systemd? | default true) $machine.name $"($machine.init_commands | str join ' ; ')"
     }
     if $machine.properties? != null {
       for property in $machine.properties {
