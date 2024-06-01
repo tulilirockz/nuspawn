@@ -1,7 +1,7 @@
 use meta.nu [NAME, NSPAWNHUB_STORAGE_ROOT]
 use logger.nu *
 
-# Fetch image off of remote and save to specified location, allowing you to manually mess around with it 
+# Fetch image off of remote and save to specified location. 
 export def "main fetch" [
   --type (-t) = "tar" # Type of the image (raw, tar)
   --extract (-e) # Extract image if it is a tarball

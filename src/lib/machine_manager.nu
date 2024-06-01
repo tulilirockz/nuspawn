@@ -3,6 +3,10 @@ export extern machinectl [
   ...args: string
 ]
 
+export extern systemctl [
+  ...args: string
+]
+
 export extern systemd-nspawn [
    --machine (-M): string
   ...args: string
@@ -23,6 +27,12 @@ export extern "machinectl shell" [user_connection: string, ...args: string]
 export extern "machinectl read-only" [machine: string, enabled: string]
 export extern "machinectl show-image" [machine: string]
 export extern "machinectl stop" [machine: string]
+export extern "systemctl start" [unit: string]
+export extern "systemctl stop" [unit: string]
+export extern "systemctl kill" [unit: string]
+export extern "systemctl enable" [unit: string]
+export extern "systemctl disable" [unit: string]
+export extern "systemctl set-propery" [unit: string, property: string]
 
 export const CONFIG_EXTENSION = "nspawn"
 

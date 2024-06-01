@@ -1,15 +1,17 @@
 use meta.nu [NAME, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH]
 use logger.nu *
 use std assert
-use machine_manager.nu [CONFIG_EXTENSION, run_container]
+use start.nu ["main start" "main stop"]
+use remove.nu ["main remove"]
+use machine_manager.nu [CONFIG_EXTENSION, run_container, systemctl]
 
-# Compose Nspawn machines from YAML
+# Compose Nspawn machines from a compose YAML file
 export def "main compose" [] {
   $"Usage: ($NAME) compose <command>..."
 }
 
-# Create new machines from YAML manifest
-export def --env "main compose create" [
+# Create new machines from compose manifest
+export def --env "main compose up" [
   --nspawnhub-url: path = $NSPAWNHUB_STORAGE_ROOT # Fallback NspawnHub URL for images 
   --storage-root: path = $MACHINE_STORAGE_PATH # Storage root for machines
   --config-root: path = $MACHINE_CONFIG_PATH # Configuration path for machines
@@ -87,32 +89,67 @@ export def --env "main compose create" [
     }
     if $machine.properties? != null {
       for property in $machine.properties {
-        run-external 'systemctl' 'set-property' $"systemd-nspawn@($machine.name).service" $"($property)"
+        systemctl 'set-property' $"systemd-nspawn@($machine.name).service" $"($property)"
       }
     }
   }
 }
 
-# Delete all images specified in 
-export def "main compose remove" [
-  --storage-root: string = $MACHINE_STORAGE_PATH # Storage root for machines
-  --config-root: string = $MACHINE_CONFIG_PATH # Configuration path for machines
-  --full (-f) = true # Delete all related files (configuration files, etc...)
-  --yes (-y) # Delete without confirmation
-  manifest: string # Manifest to be used
+# Delete all images from a compose manifest 
+export def "main compose down" [
+  --storage-root = $MACHINE_STORAGE_PATH # Path for machine storage
+  --config-root = $MACHINE_CONFIG_PATH # Path for nspawn configurations 
+  --yes (-y) # Do not warn when deleting machine
+  --full (-f) = false # Delete configuration for the machine too
+  --type (-t): string = "tar" # Type of the machine to be deleted
+  --machinectl (-m) = true # Use machinectl for operations   
+  ...manifests: string # Manifests to be used
 ] {
-  let manifest_data = (open $manifest)
+  for manifest in $manifests {
+    (main 
+      remove
+      --machinectl=$machinectl
+      --storage-root=$storage_root
+      --config-root=$config_root
+      --full=$full
+      --type=$type
+      --yes=$yes
+      ...((open $manifest).machines? | filter { |e| $e.name? != null } | select name).name
+    )
+  }
+}
 
-  assert ($manifest_data.machines != null)
-  for machine in $manifest_data.machines {
-    assert ($machine.name != null) "You must specify a name for your machine"
-    assert ($machine.type != null) "Your machine should have some type declared"
-    logger info $"Deleting ($machine.name)"
-    try {
-      rm -rfvi $"($config_root)/($machine.name).($CONFIG_EXTENSION)"
-    } catch { }
-    try {
-      rm -rfvi ...(glob $"($storage_root)/($machine.name)*")
-    } catch { }
+# Start machines from a compose manifest
+export def "main compose start" [
+  --restart (-r) # Restart instead of just starting up the machines
+  --machinectl (-m) = true # Use machinectl for operations
+  --force (-f) # Force stopping machine if using --restart option
+  --kill (-k) # Send sigkill to machine if using --restart and --force option
+  ...manifests: string # Manifest to be used
+] {
+  for manifest in $manifests {
+    (main 
+      start
+      --machinectl=$machinectl
+      --force=$force
+      --kill=$kill
+      ...((open $manifest).machines? | filter { |e| $e.name? != null } | select name).name
+    )  
+  }
+}
+
+# Stop machines from a compose manifest
+export def "main compose stop" [
+  --machinectl (-m) = true # Use machinectl for operations
+  --kill (-k) # Send sigkill to systemd-nspawn unit for machine
+  ...manifests: string # Manifests to be used
+] {
+  for manifest in $manifests {
+    (main 
+      stop
+      --machinectl=$machinectl
+      --kill=$kill
+      ...((open $manifest).machines? | filter { |e| $e.name? != null } | select name).name
+    )
   }
 }

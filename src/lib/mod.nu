@@ -10,3 +10,6 @@ export use enter.nu *
 export use machine_manager.nu *
 export use verify.nu *
 export use version.nu *
+export use rename.nu *
+export use setup.nu *
+export use start.nu *

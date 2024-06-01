@@ -12,7 +12,7 @@ export def "main config" [] {
   $"Usage: ($NAME) config <command>..."
 }
 
-# Applies a nspawn configuration file over to the machine storage root in order to be used with machinectl
+# Applies a nspawn configuration file over to the machine storage root
 export def "main config apply" [  
   --config-root: string = $MACHINE_CONFIG_PATH # Path where machines are stored
   --machine-root: string = $MACHINE_STORAGE_PATH # Path where machines are stored

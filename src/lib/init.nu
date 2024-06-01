@@ -2,10 +2,11 @@ use logger.nu *
 use meta.nu [NSPAWNHUB_KEY_LOCATION, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH]
 use machine_manager.nu [machinectl, run_container]
 use std assert
+use setup.nu ["main setup"]
 use config.nu ["main config apply", "main config"]
 use verify.nu [gpg]
 
-# Import tar/raw images to machinectl from nspawnhub or any other registry.
+# Import tar/raw images to machinectl from nspawnhub or any other registry and set them up for usage.
 export def --env "main init" [
   --nspawnhub-url: path = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
   --storage-root: path = $MACHINE_STORAGE_PATH # Local storage path for Nspawn machines 
@@ -97,13 +98,6 @@ export def --env "main init" [
     machinectl show-image $output_image | lines | str trim
   }
 
-  logger info "Setting up passwordless root for container"
-  (run_container 
-    --nspawn=$nspawn 
-    $output_image
-    "mkdir -p /etc/nuspawn"
-    "echo "1" >> /etc/nuspawn/container" # For fancy shells when you want to know if you are in a container for your PS1 or virtual environment
-    "sed -i "s/^root.*/root::1::::::/g" /etc/shadow" 
-    $"echo 'root::1::::::' >> /etc/shadow" # Will add a duplicate if the image already has a definition, but doesnt matter in the end
-  )
+  logger info "Setting up machine"
+  main setup --nspawn=$nspawn $output_image
 }

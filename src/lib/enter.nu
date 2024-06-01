@@ -2,6 +2,7 @@ use std assert
 use machine_manager.nu [machinectl run_container]
 
 # Enter and setup an nspawn container with your current user
+#
 # Requires your container to have a recent version of systemd-userdb if you are binding your current user to the machine
 export def --env "main enter" [
   --machinectl (-m) # Use machinectl for operations instead of machinectl
@@ -19,7 +20,7 @@ export def --env "main enter" [
 
   if not $machinectl {
     try {
-      machinectl stop $machine | ignore
+      machinectl stop $machine e>/dev/null | ignore 
     }
     (systemd-run 
       --uid=0 
@@ -28,7 +29,6 @@ export def --env "main enter" [
       -q
       --
       'systemd-nspawn'
-      '-b'
       '-M'
       $'($machine)' 
       '--bind=/home:/home'

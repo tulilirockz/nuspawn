@@ -1,7 +1,9 @@
 use meta.nu [MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH]
 use logger.nu *
 
-# Delete all local images - WARNING: destructive operation, this WILL delete everything.
+# Delete all local images 
+#
+# WARNING: destructive operation, this WILL delete everything.
 export def "main prune" [
   --storage-root = $MACHINE_STORAGE_PATH # Place where all images are located (WARNING: will delete everything there!) 
   --config-root = $MACHINE_CONFIG_PATH # Place where all images are located (WARNING: will delete everything there!) 
