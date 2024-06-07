@@ -1,103 +1,64 @@
-use logger.nu *
-use meta.nu [NSPAWNHUB_KEY_LOCATION, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH]
-use machine_manager.nu [machinectl, run_container]
-use std assert
+use meta.nu [NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH, DEFAULT_MACHINE, DEFAULT_RELEASE]
+use pull.nu ["main pull"]
+use config.nu ["main config", "main config apply"]
 use setup.nu ["main setup"]
-use config.nu ["main config apply", "main config"]
-use verify.nu [gpg]
 
-# Import tar/raw images to machinectl from nspawnhub or any other registry and set them up for usage.
-export def --env "main init" [
-  --nspawnhub-url: path = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
-  --storage-root: path = $MACHINE_STORAGE_PATH # Local storage path for Nspawn machines 
-  --config-root: path = $MACHINE_CONFIG_PATH # Local storage path for Nspawn machines
+# Initialize a machine and set it up for usage
+export def "main init" [
+  --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
+  --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
+  --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
   --verify (-v): string = "checksum" # The type of verification ran on the images ("no", "checksum", "gpg") 
   --name (-n): string # Name of the machine to be called
-  --config (-c): path # Path for the nspawn config to be applied
-  --override (-o) # Overrides the existing machine in storage
-  --override-config = true # Overrides the existing configuration for the container
+  --override (-f) # Override the existing machine in storage
+  --override-config = true # Override the existing configuration in storage
+  --config (-c): path # Configuration to be applied to the machine
   --type (-t): string = "tar" # Type of machine (Raw or Tarball)
   --from-url (-u): string # Fetch image from URL instead of NspawnHub
-  --pull-only (-p): string # Just pull the image without setting up anything
-  --nspawn (-n) # Use nspawn as the backend for operations instead of machinectl (necessary for systemd-less images)
+  --machinectl (-m) = true # Use machinectl for operations
+  --tar-extension: string = "tar.xz" # Extension to be used for fetching tarballs (only needed if not using machinectl)
   --yes (-y) # Skip any input questions and just confirm them
-  image?: string = "debian"
-  tag?: string = "sid"
+  image?: string = DEFAULT_MACHINE
+  release?: string = DEFAULT_RELEASE
 ] {
-  let nspawnhub_gpg_path = $"($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")/nuspawn/nspawnhub.gpg"
-  let nuspawn_cache = $"($env.XDG_CACHE_HOME? | default $"($env.HOME)/.cache")/nuspawn"
+  let name = if $name != null { $name } else {  $"($image)-($release)-($type)" }
 
-  if ($verify == "gpg") and (not ($nspawnhub_gpg_path | path exists)) {
-    logger error "Could not find nspawnhub's GPG keys"
-    if not $yes {
-      let yesno = (input $"(ansi blue_bold)Do you wish to fetch them? [y/n]: (ansi reset)")
+  try {
+    (main
+      pull
+      --nspawnhub-url=($nspawnhub_url)
+      --storage-root=($storage_root)
+      --config-root=($config_root)
+      --verify=($verify)
+      --type=($type)
+      --from-url=($from_url)
+      --machinectl=($machinectl)
+      --override=($override)
+      --name=($name)
+      --yes=($yes)
+      --tar-extension=($tar_extension)
+      $image 
+      $release)
 
-      match $yesno {
-        Y|Yes|yes|y => { }
-        _ => { return }
-      }
+    if $config != null {
+      (main
+        config
+        apply
+        --config-root=($config_root)
+        --force=($override_config) 
+        --yes=($yes)
+        $config
+        $name)
     }
-    
-    logger info "Fetching Nspawnhub keys..."
-    mkdir ($nspawnhub_gpg_path | path dirname)
-    mkdir $"($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")/gnupg" # prevent gnupg from being annoying
-    gpg --no-default-keyring --keyring=($nspawnhub_gpg_path) --fingerprint
 
-    mkdir $nuspawn_cache
-    let tfile = (mktemp -p $nuspawn_cache --suffix .gpg masterkey.nspawn.org.XXXXXXX)
-    http get $NSPAWNHUB_KEY_LOCATION | save -f $tfile
-    gpg --no-default-keyring --keyring=($nspawnhub_gpg_path) --import $"($tfile)" 
+    sleep 1sec
+    (main
+      setup
+      --machinectl=($machinectl)
+      $name)
+    (run_container 
+      --machinectl=($machinectl)
+      $name
+      $"echo '($image):($release)' >> /etc/nuspawn/meta.distro.txt") 
   }
-  
-  let nspawnhub_image_url = $"($nspawnhub_url)/($image)/($tag)/($type)/image.($type).xz"
-  mut output_image = $"($image)-($tag)-($type)"
-  if $name != null {
-    $output_image = $name
-  }
-  
-  try {
-    http head (if $from_url != null { $from_url } else { $nspawnhub_image_url }) | ignore
-  } catch {
-    logger error "Failure finding remote image, check if image is valid"
-    return
-  }
-
-  if ((machinectl show-image $output_image | complete | get exit_code) != 1) {
-    if not $override {
-      logger error "Image is already in storage, exiting."
-      machinectl show-image $output_image
-      return 
-    } 
-
-    logger info 'Deleting existing image'
-    try { machinectl stop $output_image }
-    try { machinectl remove $output_image }
-  }
-  
-  if $config != null {
-    logger info "Applying configuration to machine."
-    main config apply -y $config $output_image
-  }
-
-  try {
-    machinectl $"pull-($type)" $"--verify=($verify)" $"(if $from_url != null { $from_url } else { $nspawnhub_image_url })" $"($output_image)"
-  } catch {
-    logger error "Failure when fetching image"
-    return
-  }
-
-  logger info "Removing read-only attribute from image"
-  try {
-    machinectl read-only $"($output_image)" "false"
-  } catch {
-    logger error "Failure setting image as writable"
-  }
-
-  if $pull_only != null {
-    logger success "All done! This is your new machine:"
-    machinectl show-image $output_image | lines | str trim
-  }
-
-  logger info "Setting up machine"
-  main setup --nspawn=$nspawn $output_image
 }

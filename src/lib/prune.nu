@@ -5,12 +5,13 @@ use logger.nu *
 #
 # WARNING: destructive operation, this WILL delete everything.
 export def "main prune" [
-  --storage-root = $MACHINE_STORAGE_PATH # Place where all images are located (WARNING: will delete everything there!) 
-  --config-root = $MACHINE_CONFIG_PATH # Place where all images are located (WARNING: will delete everything there!) 
-  --clean = true # Clean hidden files with machinectl
-  --no-warning # Do not warn that this will delete everything from local storage
+  --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
+  --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
+  --clean = true # Remove fetched hidden images
+  --machinectl = true # Use machinectl for operations
+  --yes (-y) # Do not warn that this will delete everything from local storage
 ] -> null {
-  if not $no_warning {
+  if not $yes {
     logger warning "THIS COMMAND WILL CLEAR ALL IMAGES IN LOCAL STORAGE, type YES if you agree to delete everything"
     try {
       ls -a $storage_root
@@ -29,14 +30,17 @@ export def "main prune" [
 
   logger warning $"Deleting images and configurations"
   try {
-    # I dislike this pattern as much as the next person, but I really dont know how to make this work properly 
-    # TODO: Make this better somehow
-    rm -rifv ...(glob $"($storage_root)/*") ...(glob $"($config_root)/*")
-    if $clean {
+    if $machinectl {
+      machinectl --output=json list-images | from json | each { |e| machinectl remove $e.name } | ignore
+    } else {
+      rm -rfv --interactive=(not $yes) ...(glob $"($storage_root)/*") ...(glob $"($config_root)/*")
+    }
+    if $clean and $machinectl {
       machinectl clean
     }
   } catch {
     logger error "Failure deleting local storage images due to permission errors"
     return
   }
+  logger success "Machines successfully pruned from your system"
 }

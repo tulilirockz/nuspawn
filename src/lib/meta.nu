@@ -6,3 +6,6 @@ export const NSPAWNHUB_KEY_LOCATION = "https://hub.nspawn.org/storage/masterkey.
 export const MACHINE_STORAGE_PATH = "/var/lib/machines"
 export const MACHINE_CONFIG_PATH = "/etc/systemd/nspawn"
 export const NUSPAWN_PROFILES_PATH = "/etc/nuspawn/profiles"
+export const CONFIG_EXTENSION = "nspawn"
+export const DEFAULT_MACHINE = "debian"
+export const DEFAULT_RELEASE = "sid"

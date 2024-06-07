@@ -17,6 +17,10 @@ A [Nushell](https://nushell.sh) wrapper over systemd-nspawn and machinectl initi
 
 We aim to make this as self-contained with as few dependencies as possible, using just the [nushell](https://nushell.sh) and few binaries like [machinectl](https://www.freedesktop.org/software/systemd/man/latest/machinectl.html), [gpg](https://www.gnupg.org/) and GNU tar (optionally).
 
+## Version Requirements
+
+This project, as of release 0.7.5, requires nushell 0.93 and systemd v256 to work properly due to utility functions and unprivileged systemd-nspawn containers, it will work fine on other versions, but youll need to confirm every time you run your container 
+
 ## Usage
 
 ### Initializing your first container
@@ -40,7 +44,7 @@ You can also declare your Nspawn machines in YAML manifests to have them automat
 ```yaml
 
 # Version is required due to future breaking changes, it will not let you use old versions on newer versions, not letting you just break the application
-version: '0.5'
+version: '0.7'
 
 # Notice that you can declare multiple machines here!
 machines: 

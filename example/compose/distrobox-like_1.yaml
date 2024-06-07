@@ -1,0 +1,32 @@
+version: '0.7'
+
+machines: 
+  - name: alma
+    image: almalinux
+    tag: 9
+    type: tar
+    no_setup: true
+    init_commands:
+      - dnf -y swap coreutils-single coreutils-full
+      - dnf -y reinstall acl bash curl gawk grep gzip libcap openssl p11-kit pam python3 rpm sed systemd tar
+      - dnf -y install 'dnf-command(config-manager)'
+      - dnf config-manager --set-enabled crb
+      - dnf -y install epel-release
+      - dnf -y install bash-completion bc bzip2 diffutils dnf-plugins-core findutils flatpak-spawn git gnupg gnupg2-smime gvfs-client hostname iproute iputils keyutils krb5-libs less lsof man-db man-pages mtr nano nss-mdns openssh-clients passwd pigz procps-ng rsync shadow-utils sudo tcpdump time traceroute tree unzip util-linux vte-profile wget which words xorg-x11-xauth xz zip
+      - dnf -y upgrade 
+      - dnf clean all
+    inline_config: |
+      [Network]
+      VirtualEthernet=no
+      [Exec]
+      Environment=DISPLAY=:0
+      Environment=TERM=xterm-256color
+      Environment=WAYLAND_DISPLAY=wayland-1
+      SystemCallFilter=add_key keyctl bpf
+      [Files]
+      Bind=/home:/home
+      Bind=/dev/fuse:/dev/fuse
+      Bind=/run/user:/run/user
+      Bind=/dev/dri:/dev/dri
+    properties:
+      - DeviceAllow=/dev/fuse rwm

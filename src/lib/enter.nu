@@ -1,47 +1,67 @@
 use std assert
 use machine_manager.nu [machinectl run_container]
+use meta.nu [DEFAULT_MACHINE, DEFAULT_RELEASE, NAME]
 
-# Enter and setup an nspawn container with your current user
+# Enter and setup an nspawn machine with your current user
 #
-# Requires your container to have a recent version of systemd-userdb if you are binding your current user to the machine
+# Requires your machine to have a recent version of systemd-userdb if you are binding your current user to the machine
 export def --env "main enter" [
-  --machinectl (-m) # Use machinectl for operations instead of machinectl
-  --shadow = true # Copy your user hashed password from /etc/shadow and put it inside the container
-  --root-user: string = "root" # User with root privileges in the container
-  --environment (-e): list<string> # Test
-  --setup-no-bind = false # Sets up the container for usage without binding user
-  --no-bind = false # Use this if you are having issue with user binding
-  --bind-dirs = "/home:/home" # Comma separated list of directories bound to the container (e.g.: /home/developer:/opt/dev./home/tulili:/tmp/hosthome)
-  --user: string # User that will be binded to the container
+  --machinectl (-m) = false # Use machinectl for operations instead of machinectl
+  --boot # Force booting for machine when not using machinectl 
+  --shadow = true # Copy your user hashed password from /etc/shadow and put it inside the machine
+  --no-bind # Use this if you are having issue with user binding
+  --extra-bind = "/home:/home" # Comma separated list of directories bound to the machine (e.g.: /home/developer:/opt/dev./home/tulili:/tmp/hosthome)
+  --exec-user # Use specified user in user flag in non-booted environments
+  --user: string # User that will be binded to the machine
   machine: string # Name of the machine to be logged into
-  ...args: list<string> # Extra arguments to pass to the backend
 ] {   
-  let user = (if $user != null { $user } else { ($env.USER? | default root) })
+  let user = (if $user != null { $user } else { ($env.USER? | default "root") })
 
-  if not $machinectl {
-    try {
-      machinectl stop $machine e>/dev/null | ignore 
+  if ((machinectl show-image $machine | complete | get exit_code) == 1) {
+    let yesno = (input $"(ansi blue_bold)[($NAME)] Machine does not seem to be initialized, do you want to initialize a default ($DEFAULT_MACHINE) ($DEFAULT_RELEASE) machine? [Y/n]: (ansi reset)")
+
+    match $yesno {
+      Y|Yes|yes|y => { }
+      _ => { return }
     }
-    (systemd-run 
-      --uid=0 
-      --gid=0 
-      -t 
-      -q
-      --
-      'systemd-nspawn'
-      '-M'
-      $'($machine)' 
-      '--bind=/home:/home'
-      '--bind=/run/user:/run/user'
-      '--set-credential=firstboot.locale:C.UTF-8'
-      '--bind=/dev/dri'
-      '--bind=/dev/shm'
-      $'--setenv=DISPLAY=($env.DISPLAY? | default ":0")'
-      $"--setenv=WAYLAND_DISPLAY=($env.WAYLAND_DISPLAY? | default "wayland-1")"
-      (if not $no_bind { $"--bind-user=($user)" }) 
-      (if not $no_bind {"-U"})
-    )
+    
+    (main 
+      init
+      --override=true
+      --override-config=true
+      --machinectl=true
+      --name=($machine) 
+      $DEFAULT_MACHINE
+      $DEFAULT_RELEASE)
     return
   }
-  machinectl shell $"($user)@($machine)" # Should be pre-configured by init or compose
+
+  if $machinectl {
+    try { machinectl -q start $machine e>| ignore }
+    machinectl -q shell $"($user)@($machine)" e>| ignore # Should be pre-configured by init or compose
+    return
+  }
+
+  (systemd-run 
+    --uid=0 
+    --gid=0 
+    -t 
+    -q
+    --
+    'systemd-nspawn'
+    '-q'
+    '-M'
+    $'($machine)'
+    '--set-credential=firstboot.locale:C.UTF-8'
+    '--bind=/run/user'
+    '--bind=/dev/dri'
+    '--bind=/dev/shm'
+    '--bind=/home'
+    $'--setenv=DISPLAY=($env.DISPLAY? | default ":0")'
+    $"--setenv=WAYLAND_DISPLAY=($env.WAYLAND_DISPLAY? | default "wayland-0")"
+    (if not $no_bind {"-U"})
+    (if not $no_bind { $"--bind-user=($user)" }) 
+    (if $boot {"-b"} else { $"--chdir=($env.PWD? | default "/home")" })
+    #(if $exec_user { $"--user=($user)" })
+  )
 }

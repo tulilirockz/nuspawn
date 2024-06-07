@@ -1,9 +1,10 @@
 use logger.nu *
-use meta.nu [NSPAWNHUB_STORAGE_ROOT]
+use meta.nu [NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH]
+use machine_manager.nu machinectl
 
 # List the current nspawnhub images
 export def "main remote list" [
-  --nspawnhub-url = $NSPAWNHUB_STORAGE_ROOT # Root URL for NspawnHub's storage
+  --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
 ] -> table<Distro, Release>? {
   let NSPAWNHUB_LIST = $"($nspawnhub_url)/list.txt"
   try {
@@ -12,21 +13,28 @@ export def "main remote list" [
       | range 2..
       | split column "|" image tag init
       | reject init
+      | uniq
       | each { |e| $e | str trim }
   } catch {
     logger error $"Failed fetching current image information from ($NSPAWNHUB_LIST)"
-    return
   }
 }
 
 # List local storage images
 export def "main list" [
-  target: string = "/var/lib/machines" # Machine storage location
-] -> table<name, readonly, type, created>? {
+  --machinectl (-m) = true # Use machinectl for operations
+  --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
+] -> table? {  
   try {
-    ls -l $target | select name readonly type created
+    let images = (
+      if $machinectl { machinectl --output=json list-images | from json } 
+      else { ls -l $storage_root | select name readonly type created })
+    if ($images | length) == 0 {
+      logger error "No images found."
+      return
+    }
+    $images
   } catch {
-    logger error $"Failure listing machines due to permission issues"
-    return
+    logger error "Failure listing machines due to permission issues"
   }
 }

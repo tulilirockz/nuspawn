@@ -1,6 +1,6 @@
 Name:          nuspawn
 Vendor:        tulilirockz
-Version:       0.3.0+{{{ git_ref }}}
+Version:       0.7.5+{{{ git_ref }}}
 Release:       0%{?dist}
 Summary:       Helper for Nspawn and Machinectl
 License:       3.0-BSD

@@ -3,11 +3,10 @@
 use ./lib *
 
 # Helper for systemd-nspawn.
-def "main" [] {
+def main [] {
   $"Usage: ($NAME) <command>...
 
 Helper for systemd-nspawn.
 
-To get started, try out nuspawn init"
+To get started, try out ($NAME) init"
 }
-
