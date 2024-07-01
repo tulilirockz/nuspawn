@@ -1,7 +1,5 @@
 #!/usr/bin/env -S nu --stdin
-
 use ./lib *
-
 # Helper for systemd-nspawn.
 def main [] {
   $"Usage: ($NAME) <command>...

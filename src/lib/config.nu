@@ -1,7 +1,6 @@
 use meta.nu [NAME, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH, CONFIG_EXTENSION]
 use machine_manager.nu machinectl
 use logger.nu *
-
 export def get_config_path [
   config_root: string, 
   machine_name: string, 
@@ -9,12 +8,10 @@ export def get_config_path [
 ] {
   return $"($config_root)/($machine_name).($extension)"
 }
-
 # Manage machine configurations
 export def "main config" [] {
   $"Usage: ($NAME) config <command>..."
 }
-
 # Applies a nspawn configuration file to selected machines
 export def "main config apply" [
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
@@ -68,8 +65,7 @@ export def "main config apply" [
     logger success $"[($machine)] Applied configuration to machine"
   }
 }
-
-# Modify machine configuration with $EDITOR
+# Modify machine configuration
 export def --env "main config edit" [
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
@@ -95,7 +91,6 @@ export def --env "main config edit" [
 
   logger success "Changes applied successfully"
 }
-
 # Reset configuration for machine
 export def "main config remove" [
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
@@ -128,7 +123,6 @@ export def "main config remove" [
     }
   }
 }
-
 # List all existing configurations
 export def "main config list" [  
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
@@ -147,7 +141,6 @@ export def "main config list" [
     logger error $"Failed listing configurations due to permission errors"
   }
 }
-
 # Show configuration for a machine
 export def "main config show" [
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored

@@ -15,12 +15,13 @@
           name = pname;
           src = pkgs.lib.cleanSource ./.;
 
-          buildInputs = with pkgs; [ systemd ];
+          buildInputs = with pkgs; [ systemd gnutar coreutils nushell ];
 
           buildCommand = ''
             mkdir -p $out/bin $out/lib
             cp $src/src/${pname} $out/bin
             substituteInPlace $out/bin/${pname} --replace-warn './lib' "$out/lib/"
+            patchShebangs $out/bin/${pname}
             cp -r $src/src/lib/* $out/lib
           '';
         };

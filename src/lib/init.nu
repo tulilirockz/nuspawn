@@ -2,7 +2,6 @@ use meta.nu [NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH, 
 use pull.nu ["main pull"]
 use config.nu ["main config", "main config apply"]
 use setup.nu ["main setup"]
-
 # Initialize a machine and set it up for usage
 export def "main init" [
   --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root

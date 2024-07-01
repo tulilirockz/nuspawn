@@ -4,6 +4,7 @@ machines:
   - name: debox
     image: debian
     tag: sid
+    no_setup: true
     type: tar
     env:
       - DEBIAN_FRONTEND=noninteractive
@@ -11,9 +12,10 @@ machines:
       - rm -f /etc/apt/apt.conf.d/docker-gzip-indexes /etc/apt/apt.conf.d/docker-no-languages
       - sed -Ei 's/^(hosts:.*)(\<files\>)\s*(.*)/\1\2 myhostname \3/' /etc/nsswitch.conf
       - apt update -y && apt upgrade -y 
-      - apt install -y bash-completion bc bzip2 diffutils findutils flatpak-xdg-utils git gnupg gpgsm hostname iproute2 iputils-tracepath keyutils less libcap2-bin libkrb5-3 libnss-mdns lsof man-db manpages mtr nano openssh-client passwd pigz procps rsync sudo tcpdump time traceroute tree unzip util-linux wget xauth xz-utils zip fuse-overlayfs docker.io sudo
+      - apt install -y sudo bash-completion bc bzip2 diffutils findutils flatpak-xdg-utils git gnupg gpgsm hostname iproute2 iputils-tracepath keyutils less libcap2-bin libkrb5-3 libnss-mdns lsof man-db manpages mtr nano openssh-client passwd pigz procps rsync sudo tcpdump time traceroute tree unzip util-linux wget xauth xz-utils zip fuse-overlayfs docker.io sudo
       - sed -i -e 's/ ALL$/ NOPASSWD:ALL/' /etc/sudoers
       - echo 'VARIANT_ID=container' >> /etc/os-release
+      - echo 'cgroup /sys/fs/cgroup cgroup2 rw' >> /etc/fstab
     inline_config: |
       [Network]
       VirtualEthernet=no
@@ -23,10 +25,11 @@ machines:
       Environment=TERM=xterm-256color
       Environment=WAYLAND_DISPLAY=wayland-1
       SystemCallFilter=add_key keyctl bpf
+      Capability=CAP_CHOWN CAP_KILL CAP_NET_ADMIN CAP_NET_RAW CAP_IPC_LOCK CAP_SYS_ADMIN CAP_SYS_RESOURCE CAP_DAC_OVERRIDE CAP_FOWNER CAP_SETGUID CAP_SETUID
       [Files]
-      Bind=/home:/home
-      Bind=/dev/fuse:/dev/fuse
-      Bind=/run/user:/run/user
-      Bind=/dev/dri:/dev/dri
+      Bind=/home
+      Bind=/dev/fuse
+      Bind=/run/user
+      Bind=/dev/dri
     properties:
       - DeviceAllow=/dev/fuse rwm

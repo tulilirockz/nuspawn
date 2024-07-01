@@ -1,22 +1,19 @@
 use meta.nu [NAME, VERSION, GIT_COMMIT]
-
 # Display nuspawn version
 export def "main version" [] {
   $"($NAME) ($VERSION)-($GIT_COMMIT)"
 }
-
 # Display nuspawn logo
 export def "main version logo" [] {
 "888888ba           .d88888b                                           8b
-88    `8b          88.                                                `8b
-88     88 dP    dP `Y88888b. 88d888b. .d8888b. dP  dP  dP 88d888b.     `8b
-88     88 88    88       `8b 88   `88 88    88 88  88  88 88    88     .8P
+88     8b          88.                                                 8b
+88     88 dP    dP  Y88888b. 88d888b. .d8888b. dP  dP  dP 88d888b.      8b
+88     88 88    88        8b 88    88 88    88 88  88  88 88    88     .8P
 88     88 88.  .88 d8    .8P 88.  .88 88.  .88 88.88b.88  88    88    .8P
-dP     dP `88888P   Y88888P  88Y888P   88888P8 8888P Y8P  dP    dP    8P
+dP     dP  88888P   Y88888P  88Y888P   88888P8 8888P Y8P  dP    dP    8P
                              88
                              dP"
 }
-
 # Display nuspawn license
 export def "main version license" [] {
   "Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:

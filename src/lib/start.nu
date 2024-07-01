@@ -1,6 +1,5 @@
 use logger.nu *
 use machine_manager.nu [machinectl, systemctl]
-
 # Start a machine
 export def "main start" [
   --machinectl (-m) = true # Use machinectl for operations
@@ -23,7 +22,6 @@ export def "main start" [
     }
   }
 }
-
 # Stop a machine
 export def "main stop" [
   --machinectl (-m) = true # Use machinectl for operations

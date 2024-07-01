@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="180"
+   height="180"
+   viewBox="0 0 180 180"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1">
+    <rect
+       style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#2b0000;fill-opacity:1;stroke-width:1.01155;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none"
+       id="rect1"
+       width="180"
+       height="180"
+       x="0"
+       y="0" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:87.5261px;font-family:System-ui;-inkscape-font-specification:System-ui;fill:#000080;stroke-width:7.2938"
+       x="12.431706"
+       y="116.37669"
+       id="text1-5"><tspan
+         id="tspan1-5"
+         x="12.431706"
+         y="116.37669"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:inter;-inkscape-font-specification:inter;stroke-width:7.2938;fill:#000080">ns&gt;</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:87.5261px;font-family:System-ui;-inkscape-font-specification:System-ui;fill:#f9f9f9;stroke-width:7.2938"
+       x="12.431706"
+       y="113.67649"
+       id="text1"><tspan
+         id="tspan1"
+         x="12.431706"
+         y="113.67649"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:inter;-inkscape-font-specification:inter;fill:#f9f9f9;stroke-width:7.2938"><tspan
+   style="fill:#00ffff"
+   id="tspan2">ns</tspan>&gt;</tspan></text>
+  </g>
+</svg>

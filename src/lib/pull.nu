@@ -7,7 +7,6 @@ use start.nu ["main start", "main stop"]
 use remove.nu ["main remove"]
 use config.nu ["main config apply", "main config"]
 use verify.nu [gpg]
-
 # Import tar/raw images to machinectl from nspawnhub or any other registry
 export def --env "main pull" [
   --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
@@ -76,12 +75,10 @@ export def --env "main pull" [
     if $name != null { $name }
     else { $"($image)-($tag)-($type)" })
 
-  let machine_exists = (
-    if $machinectl { ((machinectl show-image $machine | complete | get exit_code)) != 1 }
-    else { false }) # TODO: implement this maybe as a separate command
-    
+  let machine_exists = (machine_exists -t $type --storage-root=($storage_root) $machine)
+
   if $machine_exists and (not $override) {
-    logger error "Image is already in storage, exiting."
+    logger error "Machine is already in storage, exiting."
     return 
   } else if ($override) {
     logger info 'Deleting existing image'

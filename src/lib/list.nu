@@ -1,7 +1,6 @@
 use logger.nu *
 use meta.nu [NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH]
 use machine_manager.nu machinectl
-
 # List the current nspawnhub images
 export def "main remote list" [
   --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
@@ -19,11 +18,10 @@ export def "main remote list" [
     logger error $"Failed fetching current image information from ($NSPAWNHUB_LIST)"
   }
 }
-
-# List local storage images
+# List local storage machines
 export def "main list" [
-  --machinectl (-m) = true # Use machinectl for operations
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
+  --machinectl (-m) = true # Use machinectl for operations
 ] -> table? {  
   try {
     let images = (

@@ -6,14 +6,11 @@ use setup.nu ["main setup"]
 use remove.nu ["main remove"]
 use pull.nu ["main pull"]
 use machine_manager.nu [CONFIG_EXTENSION, run_container, systemctl]
-
 const COMPOSE_VERSION = "0.7"
-
 # Compose machines from a compose manifest
 export def "main compose" [] {
   $"Usage: ($NAME) compose <command>..."
 }
-
 # Create new machines from a compose manifest
 export def --env "main compose up" [
   --nspawnhub-url: path = $NSPAWNHUB_STORAGE_ROOT # Fallback NspawnHub URL for images 
@@ -107,8 +104,7 @@ export def --env "main compose up" [
     }
   }
 }
-
-# Delete all images from a compose manifest 
+# Delete all images from a compose manifest
 export def "main compose down" [
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
@@ -133,7 +129,6 @@ export def "main compose down" [
     )
   }
 }
-
 # Start machines from a compose manifest
 export def "main compose start" [
   --machinectl (-m) = true # Use machinectl for operations
@@ -151,7 +146,6 @@ export def "main compose start" [
     )  
   }
 }
-
 # Stop machines from a compose manifest
 export def "main compose stop" [
   --machinectl (-m) = true # Use machinectl for operations

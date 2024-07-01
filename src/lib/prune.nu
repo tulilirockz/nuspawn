@@ -1,9 +1,9 @@
 use meta.nu [MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH]
+use list.nu ["main list"]
 use logger.nu *
-
 # Delete all local images 
 #
-# WARNING: destructive operation, this WILL delete everything.
+# WARNING: Destructive operation. This WILL delete everything.
 export def "main prune" [
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
@@ -13,13 +13,8 @@ export def "main prune" [
 ] -> null {
   if not $yes {
     logger warning "THIS COMMAND WILL CLEAR ALL IMAGES IN LOCAL STORAGE, type YES if you agree to delete everything"
-    try {
-      ls -a $storage_root
-      ls -a $config_root
-    } catch {
-      logger error "Failure displaying files to be deleted due to permission errors"
-      return
-    }
+    main list --machinectl=($machinectl)
+    
     let yesno = (input $"(ansi blue_bold)Do you wish to delete all your local images? [N]: (ansi reset)")
 
     match $yesno {
