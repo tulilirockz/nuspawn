@@ -42,7 +42,7 @@ export def --env "main enter" [
 
   if $machinectl {
     try { machinectl -q start $machine e>| ignore }
-    machinectl -q shell $"($user)@($machine)" e>| ignore # Should be pre-configured by init or compose
+    machinectl -q shell $"($user)@($machine)" ...($args) e>| ignore # Should be pre-configured by init or compose
     return
   }
 
