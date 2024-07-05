@@ -22,7 +22,6 @@ export def get_cached_file [
     $manifest | url parse | ignore 
     http head $manifest | ignore
     mkdir (get_nuspawn_cache)
-    print test
     http get --raw $manifest | save -f $cache_path
   } catch { $manifest }
   $cache_path 

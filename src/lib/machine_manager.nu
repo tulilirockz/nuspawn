@@ -55,24 +55,52 @@ export def run_container [
   --user: string = "root",
   --machinectl (-m),
   --start = true,
+  --stop = true,
   --environment (-e): string = "PATH=/usr/sbin:/usr/bin:/usr/local/bin:/bin" # Spaced environment variables for /usr/bin/env
   --env-binary: path = /usr/bin/env
   --shell-binary: path = /bin/sh
+  --timeout-max: int = 10
   machine: string,
   ...args: string
 ] {
   if $machinectl {
     if $start {    
-      try {
-        machinectl -q start $machine
-      } catch { 
-        logger error $"[($machine)] Failure starting machine"
-        return
+      mut timeout: int = 0
+      while (machinectl --output=json | from json | select machine | find $machine | length) == 0 {
+        if $timeout == $timeout_max {
+          logger error "Could not connect to machine, timed out"
+          return
+        }
+        try {
+          machinectl -q start $machine
+          sleep 1sec
+        } catch { 
+          logger error $"[($machine)] Failure starting machine"
+          return
+        }
       }
     }
-    sleep 3sec
+    mut timeout: int  = 0
+    mut successful = false
+    while ($successful == false) {
+      try {
+        if $timeout == $timeout_max {
+          logger error "Could not connect to machine, timed out"
+          return
+        }
+        machinectl -q shell $"($user)@($machine)" $env_binary $environment $shell_binary '-c' ($args | str join "whoami ; ")
+      } catch {
+        sucessful = false;
+        timeout = timeout + 1;
+        continue
+      }
+      sucessful = true
+    }
+    
     machinectl -q shell $"($user)@($machine)" $env_binary $environment $shell_binary '-c' ($args | str join " ; ")
-    try { machinectl -q stop $machine }
+    if $stop {
+      try { machinectl -q stop $machine }
+    }
   } else {
     (privileged_run
       "systemd-nspawn"
@@ -82,7 +110,9 @@ export def run_container [
       $shell_binary 
       '-c' ($args | str join " ; ")
     )
-    try { systemctl stop $"systemd-nspawn@($machine)" }
+    if $stop {
+      try { systemctl stop $"systemd-nspawn@($machine)" }
+    }
   }
 }
 

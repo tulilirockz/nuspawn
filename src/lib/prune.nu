@@ -26,7 +26,7 @@ export def "main prune" [
   logger warning $"Deleting images and configurations"
   try {
     if $machinectl {
-      machinectl --output=json list-images | from json | each { |e| machinectl remove $e.name } | ignore
+      machinectl --output=json list-images | from json | each { |e| logger info $"Removing ($e.name)" ; machinectl remove $e.name } | ignore
     } else {
       rm -rfv --interactive=(not $yes) ...(glob $"($storage_root)/*") ...(glob $"($config_root)/*")
     }

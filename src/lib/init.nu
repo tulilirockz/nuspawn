@@ -55,9 +55,5 @@ export def "main init" [
       setup
       --machinectl=($machinectl)
       $name)
-    (run_container 
-      --machinectl=($machinectl)
-      $name
-      $"echo '($image):($release)' >> /etc/nuspawn/meta.distro.txt") 
   }
 }

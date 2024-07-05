@@ -3,7 +3,7 @@ version: '0.7'
 machines: 
   - name: chimera
     type: tar
-    from-url: https://repo.chimera-linux.org/live/latest/chimera-linux-x86_64-ROOTFS-20240421-minimal.tar.gz
+    from-url: https://repo.chimera-linux.org/live/latest/chimera-linux-x86_64-ROOTFS-20240707-bootstrap.tar.gz
     verify: no
     systemd: false
     init_commands:

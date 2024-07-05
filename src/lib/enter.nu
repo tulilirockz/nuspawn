@@ -59,11 +59,14 @@ export def --env "main enter" [
     "systemd-nspawn"
     "--quiet"
     "--set-credential=firstboot.locale:C.UTF-8"
+    "--set-credential=passwd.hashed-password.root:"
+    $"--set-credential=passwd.hashed-password.($user):"
     "--bind=/run/user"
     "--bind=/dev/dri"
     "--bind=/dev/shm"
     "--bind=/home"
     $"--machine=($machine)"
+    $"--setenv=TERM=xterm-256color"
     $"--setenv=XDG_RUNTIME_DIR=($env.XDG_RUNTIME_DIR? | default "/run/user/1000")"
     $"--setenv=XDG_CONFIG_DIR=($env.XDG_CONFIG_HOME? | default "~/.config")"
     $"--setenv=XDG_DATA_DIR=($env.XDG_DATA_HOME? | default "~/.local/share")"
@@ -74,6 +77,7 @@ export def --env "main enter" [
     $"--setenv=PATH=/usr/bin:/usr/sbin:/usr/local/bin"
     $"--setenv=DISPLAY=($env.DISPLAY? | default ":0")"
     $"--setenv=WAYLAND_DISPLAY=($env.WAYLAND_DISPLAY? | default "wayland-0")"
+    "--resolv-conf=replace-stub"
     (if $boot { "--boot" } else { $"--chdir=($env.PWD? | default "/home")" } )
     (if not $no_bind { $"--bind-user=($user)" } else { "--private-users=no" })
     ...($args)

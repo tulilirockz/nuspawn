@@ -1,4 +1,5 @@
 use meta.nu [MACHINE_STORAGE_PATH]
+use machine_manager.nu privileged_run
 use logger.nu *
 
 # Pull an OCI (docker/podman) image and import it to machine storage
@@ -27,15 +28,15 @@ export def "main oci pull" [
   }
   
   let image_already_imported = (machine_exists -t "tar" --storage-root=($storage_root) $name)
-  if $image_already_imported {
+  if not $image_already_imported {
     logger error "Image already imported to storage"
     return
   }
-  if $extract and (not $image_already_imported) {
+  if $extract and $image_already_imported {
     logger info "Extracting image rootfs as machine"
     try {
-      mkdir $"($storage_root)/($name)"
-      run-external "tar" "xf" $"($tmpdir)/($name).tar" "-C" $"($storage_root)/($name)"
+      privileged_run "mkdir" "-p" $"($storage_root)/($name)"
+      privileged_run "tar" "xf" $"($tmpdir)/($name).tar" "-C" $"($storage_root)/($name)"
     } catch {
       logger error "Failure extracting container image to machine storage"
       return

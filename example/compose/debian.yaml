@@ -6,7 +6,7 @@ machines:
   - name: debox
     image: debian
     tag: sid
-    type: raw
+    type: tar
     no_setup: true
     env:
       - DEBIAN_FRONTEND=noninteractive
@@ -23,7 +23,7 @@ machines:
   #- name: bantic
   #  image: ubuntu
   #  tag: mantic
-  #  type: raw
+  #  type: tar
   #  env:
   #    - DEBIAN_FRONTEND=noninteractive
   #  init_commands: 
