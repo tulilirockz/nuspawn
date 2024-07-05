@@ -20,6 +20,7 @@ export def --env "main compose up" [
   --nspawnhub-url: path = $NSPAWNHUB_STORAGE_ROOT # Fallback NspawnHub URL for images 
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
+  --machinectl (-m) = true # Use machinectl for operations
   --force (-f) # Override existing machines
   --config (-c): string # Fallback configuration for all parsed images
   --user (-u): string = "root" # Default user to operate on machines
@@ -57,6 +58,7 @@ export def --env "main compose up" [
         --storage-root=($storage_root)
         --override=($force)
         --yes=($yes)
+        --machinectl=($machinectl)
         --name=($machine.name) 
         $machine.image? 
         $machine.tag?

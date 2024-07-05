@@ -15,7 +15,6 @@ export def --env "main enter" [
   --hostname: string # Hostname that the machine will get
   --type: string = "tar" # Type of the machine (change this if running into checking errors)
   --vm (-v) # Treat machine as vm -> run with systemd-vmspawn
-  --share-ipc (-s) # Share IPC into the machine
   machine: string # Name of the machine to be logged into
   ...args: string
 ] {   
@@ -57,7 +56,6 @@ export def --env "main enter" [
   }
 
   (privileged_run 
-    $"--setenv=SYSTEMD_NSPAWN_SHARE_NS_IPC=(if $share_ipc { "1" } else { "" })"
     "systemd-nspawn"
     "--quiet"
     "--set-credential=firstboot.locale:C.UTF-8"
