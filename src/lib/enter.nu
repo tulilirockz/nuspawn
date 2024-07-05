@@ -10,12 +10,12 @@ export def --env "main enter" [
   --set-xdg = true # Set XDG variables by default 
   --machinectl (-m) = false # Use machinectl for operations instead of machinectl
   --boot # Force booting for machine when not using machinectl 
-  --shadow = true # Copy your user hashed password from /etc/shadow and put it inside the machine
   --no-bind # Use this if you are having issue with user binding
   --user: string # User that will be binded to the machine
-  --hostname: string # Hostname
+  --hostname: string # Hostname that the machine will get
   --type: string = "tar" # Type of the machine (change this if running into checking errors)
   --vm (-v) # Treat machine as vm -> run with systemd-vmspawn
+  --share-ipc (-s) # Share IPC into the machine
   machine: string # Name of the machine to be logged into
   ...args: string
 ] {   
@@ -42,12 +42,11 @@ export def --env "main enter" [
   }
 
   if $vm {
-    (
-      systemd-vmspawn 
-      (if $type == "raw" { "-i" } else { "-D" })
-      $"--machine=($MACHINE_STORAGE_PATH)"
-      
-    )
+    (systemd-vmspawn 
+      (if $type == "raw" { $"--image=($MACHINE_STORAGE_PATH)/($machine).raw" } else { $"--directory=($MACHINE_STORAGE_PATH)/($machine)" })
+      $"--machine=($machine)"
+      $machine
+      ...($args))
     return
   }
 
@@ -57,7 +56,8 @@ export def --env "main enter" [
     return
   }
 
-  (privileged_run
+  (privileged_run 
+    $"--setenv=SYSTEMD_NSPAWN_SHARE_NS_IPC=(if $share_ipc { "1" } else { "" })"
     "systemd-nspawn"
     "--quiet"
     "--set-credential=firstboot.locale:C.UTF-8"

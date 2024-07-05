@@ -27,6 +27,13 @@ export extern systemd-run [
   --quiet (-q)
   ...args: string
 ]
+export extern systemd-vmspawn [
+  --image (-i)
+  --directory (-d)
+  --machine (-m)
+  machine: string
+  ...args: string
+]
 export extern "machinectl pull-tar" [url: string, name?: string]
 export extern "machinectl pull-raw" [url: string, name?: string]
 export extern "machinectl remove" [machine: string]
