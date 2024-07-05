@@ -10,3 +10,9 @@ export const CONFIG_EXTENSION = "nspawn"
 export const DEFAULT_MACHINE = "debian"
 export const DEFAULT_RELEASE = "sid"
 export const NUSPAWN_CONTAINER_PATH = "/etc/nuspawn"
+export def get_nuspawn_cache [] -> string {
+  $"($env.XDG_CACHE_HOME? | default $"($env.HOME)/.cache")/nuspawn"
+}
+export def get_nuspawn_gpg_path [] -> string {
+  $"($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")/nuspawn/nspawnhub.gpg"
+}

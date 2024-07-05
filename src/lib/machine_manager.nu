@@ -1,5 +1,3 @@
-# This file only exists for preventing accidental spilling of arguments because of dynamic callings to these programs
-# Like, imagine a function calls machinectl pull-($type), calling machinectl pull-tar would work, pull-raw, too, but not pull-iso or something like that!
 export extern machinectl [
   --verify: string = "no"
   --output: string
@@ -80,11 +78,13 @@ export def run_container [
     try { systemctl stop $"systemd-nspawn@($machine)" }
   }
 }
+
 export def privileged_run [
   ...args
 ] {
   systemd-run --uid=0 --gid=0 -t -q "--" ...($args)
 }
+
 export def machine_exists [
   --storage-root: string
   --type (-t): string

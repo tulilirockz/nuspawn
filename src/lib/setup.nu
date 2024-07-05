@@ -14,6 +14,7 @@ export def "main setup" [
   }
 }
 
+# Set up passwordless sudo for machine
 export def "main setup sudo" [
   --machinectl (-m) = true # Use machinectl for operations
   machine: string

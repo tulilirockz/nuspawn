@@ -1,14 +1,11 @@
 use meta.nu [NAME, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH, CONFIG_EXTENSION]
 use machine_manager.nu machinectl
 use logger.nu *
-export def get_config_path [
-  config_root: string, 
-  machine_name: string, 
-  extension: string = $CONFIG_EXTENSION
-] {
-  return $"($config_root)/($machine_name).($extension)"
-}
-# Manage machine configurations
+use manifest.nu *
+use machine_manager.nu machine_exists
+use manifest.nu [get_cached_file, get_config_path]
+
+# Manage machine 
 export def "main config" [] {
   $"Usage: ($NAME) config <command>..."
 }
@@ -19,21 +16,16 @@ export def "main config apply" [
   --force # Override any existing configuration
   --yes (-y) # Say yes to all input-related questions
   --append # Explicitly append configuration over to config file
-  configuration: path # Path for configuration that will be applied to machine
+  --type: string = "tar" # Type of the machine
+  configuration: string # Path for configuration that will be applied to machine
   ...machines: string # Machines whose configurations will be applied
 ] {
+  let configuration = (get_cached_file $configuration)
   for machine in $machines {
     let target_config_path = (get_config_path $config_root $machine)
-  
-    try {
-      mkdir ($config_root | path dirname)
-    } catch {
-      logger error "Failure creating configuration path due to permission errors."
-      return
-    }
     
     try {
-      if (not ($"($storage_root)/($machine)" | path exists) and (not $force) and (not $yes)) {
+      if (not (machine_exists $machine -t $type --storage-root=($storage_root)) and (not $force) and (not $yes)) {
         let yesno = (input $"(ansi blue_bold)Machine does not exist, do you still with to apply? [y/N]> (ansi reset)")
 
         match $yesno {
@@ -43,6 +35,13 @@ export def "main config apply" [
       }
     } catch {
       logger error "Failure checking if machine exists due to permission errors"
+      return
+    }
+
+    try {
+      mkdir ($config_root | path dirname)
+    } catch {
+      logger error "Failure creating configuration path due to permission errors."
       return
     }
     

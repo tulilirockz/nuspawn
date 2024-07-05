@@ -15,6 +15,7 @@ export def --env "main enter" [
   --user: string # User that will be binded to the machine
   --hostname: string # Hostname
   --type: string = "tar" # Type of the machine (change this if running into checking errors)
+  --vm (-v) # Treat machine as vm -> run with systemd-vmspawn
   machine: string # Name of the machine to be logged into
   ...args: string
 ] {   
@@ -40,6 +41,16 @@ export def --env "main enter" [
     return
   }
 
+  if $vm {
+    (
+      systemd-vmspawn 
+      (if $type == "raw" { "-i" } else { "-D" })
+      $"--machine=($MACHINE_STORAGE_PATH)"
+      
+    )
+    return
+  }
+
   if $machinectl {
     try { machinectl -q start $machine e>| ignore }
     machinectl -q shell $"($user)@($machine)" ...($args) e>| ignore # Should be pre-configured by init or compose
@@ -48,14 +59,13 @@ export def --env "main enter" [
 
   (privileged_run
     "systemd-nspawn"
-    "-q"
-    "-M"
-    $machine
+    "--quiet"
     "--set-credential=firstboot.locale:C.UTF-8"
     "--bind=/run/user"
     "--bind=/dev/dri"
     "--bind=/dev/shm"
     "--bind=/home"
+    $"--machine=($machine)"
     $"--setenv=XDG_RUNTIME_DIR=($env.XDG_RUNTIME_DIR? | default "/run/user/1000")"
     $"--setenv=XDG_CONFIG_DIR=($env.XDG_CONFIG_HOME? | default "~/.config")"
     $"--setenv=XDG_DATA_DIR=($env.XDG_DATA_HOME? | default "~/.local/share")"

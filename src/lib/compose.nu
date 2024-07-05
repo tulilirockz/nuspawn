@@ -5,8 +5,12 @@ use start.nu ["main start" "main stop"]
 use setup.nu ["main setup"]
 use remove.nu ["main remove"]
 use pull.nu ["main pull"]
-use machine_manager.nu [CONFIG_EXTENSION, run_container, systemctl]
+use machine_manager.nu [CONFIG_EXTENSION, run_container, systemctl, machine_exists]
+use manifest.nu [get_cached_file, get_machines_from_manifest]
+
 const COMPOSE_VERSION = "0.7"
+
+
 # Compose machines from a compose manifest
 export def "main compose" [] {
   $"Usage: ($NAME) compose <command>..."
@@ -22,10 +26,10 @@ export def --env "main compose up" [
   --verify (-v): string = "checksum" # Fallback mode to verify images once pulled 
   --yes (-y) # Skip any input questions and just confirm them
   --no-setup (-s) = false # Do not do default setup for machines
-  ...manifests: path # Manifests to be used
+  ...manifests: string # Manifests to be used
 ] {
   for manifest in $manifests {
-    let manifest_data = (open $manifest)
+    let manifest_data = (open (get_cached_file $manifest) | from yaml)
 
     assert ($manifest_data.version == $COMPOSE_VERSION) $"This ($NAME) compose version incompatible with ($COMPOSE_VERSION)" 
     assert ($manifest_data.machines != null) "You must have a machine declared"
@@ -125,7 +129,7 @@ export def "main compose down" [
       --force=($force)
       --type=($type)
       --machinectl=($machinectl)
-      ...((open $manifest).machines? | filter { |e| $e.name? != null } | select name).name
+      ...(get_machines_from_manifest $manifest)
     )
   }
 }
@@ -142,10 +146,11 @@ export def "main compose start" [
       --machinectl=($machinectl)
       --force=($force)
       --kill=($kill)
-      ...((open $manifest).machines? | filter { |e| $e.name? != null } | select name).name
+      ...(get_machines_from_manifest $manifest)
     )  
   }
 }
+
 # Stop machines from a compose manifest
 export def "main compose stop" [
   --machinectl (-m) = true # Use machinectl for operations
@@ -157,7 +162,7 @@ export def "main compose stop" [
       stop
       --machinectl=($machinectl)
       --kill=($kill)
-      ...((open $manifest).machines? | filter { |e| $e.name? != null } | select name).name
+      ...(get_machines_from_manifest $manifest)
     )
   }
 }

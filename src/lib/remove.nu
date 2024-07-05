@@ -1,5 +1,5 @@
 use meta.nu [MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH]
-use config.nu [get_config_path]
+use manifest.nu [get_config_path]
 use logger.nu *
 use machine_manager.nu [machinectl machine_exists]
 use start.nu ["main stop"]

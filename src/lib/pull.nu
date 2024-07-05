@@ -1,6 +1,6 @@
 use logger.nu *
-use meta.nu [NSPAWNHUB_KEY_LOCATION, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH, DEFAULT_MACHINE, DEFAULT_RELEASE]
-use machine_manager.nu [machinectl, run_container]
+use meta.nu [get_nuspawn_cache, get_nuspawn_gpg_path, NSPAWNHUB_KEY_LOCATION, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH, DEFAULT_MACHINE, DEFAULT_RELEASE]
+use machine_manager.nu [machinectl, run_container, machine_exists]
 use std assert
 use setup.nu ["main setup"]
 use start.nu ["main start", "main stop"]
@@ -24,9 +24,9 @@ export def --env "main pull" [
   image?: string = DEFAULT_MACHINE
   tag?: string = DEFAULT_RELEASE
 ] {
-  let nspawnhub_gpg_path = $"($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")/nuspawn/nspawnhub.gpg"
+  let nspawnhub_gpg_path = (get_nuspawn_gpg_path)
   if ($verify == "gpg") and (not ($nspawnhub_gpg_path | path exists)) {
-  let nuspawn_cache = $"($env.XDG_CACHE_HOME? | default $"($env.HOME)/.cache")/nuspawn"
+  let nuspawn_cache = (get_nuspawn_cache)
     logger error "Could not find nspawnhub's GPG keys"
     if not $yes {
       let yesno = (input $"(ansi blue_bold)Do you wish to fetch them? [y/n]: (ansi reset)")
