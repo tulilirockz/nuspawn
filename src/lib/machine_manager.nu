@@ -80,23 +80,7 @@ export def run_container [
         }
       }
     }
-    mut timeout: int  = 0
-    mut successful = false
-    while ($successful == false) {
-      try {
-        if $timeout == $timeout_max {
-          logger error "Could not connect to machine, timed out"
-          return
-        }
-        machinectl -q shell $"($user)@($machine)" $env_binary $environment $shell_binary '-c' ($args | str join "whoami ; ")
-      } catch {
-        sucessful = false;
-        timeout = timeout + 1;
-        continue
-      }
-      sucessful = true
-    }
-    
+
     machinectl -q shell $"($user)@($machine)" $env_binary $environment $shell_binary '-c' ($args | str join " ; ")
     if $stop {
       try { machinectl -q stop $machine }

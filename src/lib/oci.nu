@@ -2,7 +2,7 @@ use meta.nu [MACHINE_STORAGE_PATH]
 use machine_manager.nu privileged_run
 use logger.nu *
 
-# Pull an OCI (docker/podman) image and import it to machine storage
+# Pull an OCI image and import it to machine storage
 export def "main oci pull" [
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
   --tmpdir: path = "/tmp" # Temporary directory where images will be fetched to

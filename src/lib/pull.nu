@@ -7,7 +7,8 @@ use start.nu ["main start", "main stop"]
 use remove.nu ["main remove"]
 use config.nu ["main config apply", "main config"]
 use verify.nu [gpg]
-# Import tar/raw images to machinectl from nspawnhub or any other registry
+
+# Import tar/raw images to the machine storage from nspawnhub or any other registry
 export def --env "main pull" [
   --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
@@ -17,6 +18,7 @@ export def --env "main pull" [
   --override (-f) # Overrides the existing machine in storage
   --type (-t): string = "tar" # Type of machine (Raw or Tarball)
   --from-url (-u): string # Fetch image from URL instead of NspawnHub
+  --from-path (-p): path # Import image from local path
   --machinectl (-m) = true # Use machinectl for operations
   --yes (-y) # Skip any input questions and just confirm them
   --fetch: string # Fetch image to path instead of pulling to machine storage
@@ -48,6 +50,30 @@ export def --env "main pull" [
     gpg --no-default-keyring --keyring=($nspawnhub_gpg_path) --import $"($tfile)" 
   }
 
+  if $from_path != null {
+    if $machinectl {
+      machinectl import-($type) $from_path
+      logger success "Imported image successfully"
+      return 
+    }
+    
+    match $type {
+      "tar" => {
+        cp $from_path $storage_root
+        let target_path = ($from_path | path basename)
+        let filename = ($target_path | split row ".").0
+        mkdir $"($storage_root)/($filename)"
+        tar -xvf $"($storage_root)/($target_path)" -C $"($storage_root)/($filename)"
+      }
+      "raw" => {
+        cp $from_path $storage_root
+      }
+    }
+    
+    logger success "Imported image successfully"
+    return
+  }
+
   let fetched_url = (
     if $from_url != null { $from_url } 
     else { $"($nspawnhub_url)/($image)/($tag)/($type)/image.($type).xz"})
@@ -55,8 +81,7 @@ export def --env "main pull" [
   try {
     http head ($fetched_url) | ignore
   } catch {
-    logger error "Failure finding remote image, check if image is valid"
-    return
+    error make {msg: "Failure finding remote image, check if image is valid"}
   }
 
   if $fetch != null {
@@ -64,7 +89,7 @@ export def --env "main pull" [
     try {
       http get $fetched_url | save -f $fetch
     } catch {
-      logger error "Failure fetching image due to either network error or permission error"
+      error make {msg: "Failure fetching image due to either network error or permission error"}
       return
     }
     logger success "Fetched image successfully!"
@@ -78,8 +103,11 @@ export def --env "main pull" [
   let machine_exists = (machine_exists -t $type --storage-root=($storage_root) $machine)
 
   if $machine_exists and (not $override) {
-    logger error "Machine is already in storage, exiting."
-    return 
+    error make {
+      msg: "Machine is already in storage or failed detecting it's existance in storage, exiting."
+      help: "Try running the program as root, this might be just a permission issue" 
+    }
+    return
   } else if ($override) {
     logger info 'Deleting existing image'
     main remove --machinectl=($machinectl) --yes=($yes) $machine
@@ -97,8 +125,10 @@ export def --env "main pull" [
       rm -f $"($storage_root)/($machine).($tar_extension)" 
     }
   } catch {
-    logger error "Failure when fetching image due to permission errors"
-    return
+    error make {
+      msg: "Failure when fetching image due to permission errors"
+      help: ""
+    } 
   }
 
   logger info "Removing read-only attribute from image"
@@ -106,7 +136,10 @@ export def --env "main pull" [
     # FIXME: I dont know how to make this without machinectl yet! Please do a PR if you do.
     machinectl read-only $"($machine)" "false"
   } catch {
-    logger error "Failure setting image as writable"
+    error make {
+      msg: "Failure setting image as writable"
+      help: "Might be either a permission issue or filesystem issue"  
+    }
   }
 
   logger success "Finished pulling machine"

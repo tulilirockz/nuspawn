@@ -2,6 +2,8 @@ use meta.nu [NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_PATH, 
 use pull.nu ["main pull"]
 use config.nu ["main config", "main config apply"]
 use setup.nu ["main setup"]
+use logger.nu *
+
 # Initialize a machine and set it up for usage
 export def "main init" [
   --nspawnhub-url: string = $NSPAWNHUB_STORAGE_ROOT # URL for Nspawnhub's storage root
@@ -38,22 +40,25 @@ export def "main init" [
       --tar-extension=($tar_extension)
       $image 
       $release)
+  } catch {
+    print wha
+    return
+  }
 
-    if $config != null {
-      (main
-        config
-        apply
-        --config-root=($config_root)
-        --force=($override_config) 
-        --yes=($yes)
-        $config
-        $name)
-    }
-
-    sleep 1sec
+  if $config != null {
     (main
-      setup
-      --machinectl=($machinectl)
+      config
+      apply
+      --config-root=($config_root)
+      --force=($override_config) 
+      --yes=($yes)
+      $config
       $name)
   }
+
+  sleep 1sec
+  (main
+    setup
+    --machinectl=($machinectl)
+    $name)
 }

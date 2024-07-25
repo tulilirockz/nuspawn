@@ -2,17 +2,17 @@ use meta.nu [NUSPAWN_CONTAINER_PATH]
 
 # Setup a machine for CLI usage
 export def "main setup" [
-  --machinectl (-m) = true # Use machinectl for operations
+  --machinectl (-m) = false # Use machinectl for operations
   --image: string = "unspecified" # Distro image
   --release: string = "unspecified" # Distro release
   ...machines: string # Machines to be setup
 ] {
   for machine in $machines {
-    main setup user $machine root --start=true --stop=false --machinectl=$machinectl --description="System Administrator"
-    main setup meta $machine --start=false --stop=false --image=$image  --release=$release --machinectl=$machinectl
-    main setup sudo $machine --start=false --stop=false --machinectl=$machinectl
-    main setup networking $machine --start=false --stop=false --machinectl=$machinectl
-    main setup groups $machine --start=false --stop=true root --machinectl=$machinectl
+    main setup user $machine root --machinectl=$machinectl --description="System Administrator"
+    main setup meta $machine --image=$image  --release=$release --machinectl=$machinectl
+    main setup sudo $machine --machinectl=$machinectl
+    main setup networking $machine --machinectl=$machinectl
+    main setup groups $machine --machinectl=$machinectl
   }
 }
 

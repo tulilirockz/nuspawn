@@ -50,7 +50,7 @@ export def --env "main compose up" [
       
       (main
         pull
-        --machinectl=true
+        --machinectl=($machinectl)
         --nspawnhub-url=($machine.nspawnhub_url? | default $nspawnhub_url) 
         --verify=($machine.verify? | default $verify) 
         --from-url=($machine.from-url?)
@@ -58,7 +58,6 @@ export def --env "main compose up" [
         --storage-root=($storage_root)
         --override=($force)
         --yes=($yes)
-        --machinectl=($machinectl)
         --name=($machine.name) 
         $machine.image? 
         $machine.tag?
@@ -84,18 +83,16 @@ export def --env "main compose up" [
           logger error $"[($machine.name)] Failure checking if machine configuration is applied"
           continue
         }
-        try {
-          logger info $"[($machine.name)] Writing inline configuration"
-          $machine.inline_config | save -f $machine_config_path
-        } catch {
-          logger error $"[($machine.name)] Failure writing inline configuration"
-          continue
+        logger info $"[($machine.name)] Writing inline configuration"
+        let return = ($machine.inline_config | save -f $machine_config_path | complete)
+        if ($return.exit_code != 0) {
+          logger error $"[($machine.name)] Failure writing inline configuration\n($return.stderr)"
+          continue 
         }
       }
 
       if $machine.init_commands? != null {
         logger info $"[($machine.name)] Executing initialization commands"
-        print $machine.init_commands
         (run_container
           --machinectl=($machine.systemd? | default true)
           $machine.name
