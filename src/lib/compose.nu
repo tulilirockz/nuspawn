@@ -44,7 +44,10 @@ export def --env "main compose up" [
           continue
         }
       } catch {
-        logger error $"[($machine.name)] Failure checking if machine has already been initialized"
+        error make -u {
+          msg: "Failed checking if machine already exists or not in storage"
+          help: $"Make sure to have access to the ($storage_root) folder"
+        }
         continue
       }
       
@@ -80,13 +83,13 @@ export def --env "main compose up" [
             continue
           }
         } catch {
-          logger error $"[($machine.name)] Failure checking if machine configuration is applied"
+          logger warning $"[($machine.name)] Failure checking if machine configuration is applied"
           continue
         }
         logger info $"[($machine.name)] Writing inline configuration"
         let return = ($machine.inline_config | save -f $machine_config_path | complete)
         if ($return.exit_code != 0) {
-          logger error $"[($machine.name)] Failure writing inline configuration\n($return.stderr)"
+          logger warning $"[($machine.name)] Failure writing inline configuration\n($return.stderr)"
           continue 
         }
       }

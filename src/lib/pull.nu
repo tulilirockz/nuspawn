@@ -6,7 +6,14 @@ use setup.nu ["main setup"]
 use start.nu ["main start", "main stop"]
 use remove.nu ["main remove"]
 use config.nu ["main config apply", "main config"]
-use verify.nu [gpg]
+
+export extern gpg [
+  --no-default-keyring
+  --keyring: string
+  --fingerprint
+  --import
+  target?: string
+]
 
 # Import tar/raw images to the machine storage from nspawnhub or any other registry
 export def --env "main pull" [
@@ -26,10 +33,12 @@ export def --env "main pull" [
   image?: string = DEFAULT_MACHINE
   tag?: string = DEFAULT_RELEASE
 ] {
+  assert ($name != null) "Name must be not empty"
+
   let nspawnhub_gpg_path = (get_nuspawn_gpg_path)
   if ($verify == "gpg") and (not ($nspawnhub_gpg_path | path exists)) {
-  let nuspawn_cache = (get_nuspawn_cache)
-    logger error "Could not find nspawnhub's GPG keys"
+    logger warning "Could not find nspawnhub's GPG keys"
+    let nuspawn_cache = (get_nuspawn_cache)
     if not $yes {
       let yesno = (input $"(ansi blue_bold)Do you wish to fetch them? [y/n]: (ansi reset)")
 
@@ -81,7 +90,11 @@ export def --env "main pull" [
   try {
     http head ($fetched_url) | ignore
   } catch {
-    error make {msg: "Failure finding remote image, check if image is valid"}
+    error make -u {
+      msg: "Failure finding remote image, check if image is valid"
+      help: "Check available images in nuspawn remote list"  
+    }
+    return
   }
 
   if $fetch != null {
@@ -89,7 +102,10 @@ export def --env "main pull" [
     try {
       http get $fetched_url | save -f $fetch
     } catch {
-      error make {msg: "Failure fetching image due to either network error or permission error"}
+      error make -u {
+        msg: "Failure fetching image"
+        help: "This error happened because of some error while saving or fetching the image, check your filesystem and network" 
+      }
       return
     }
     logger success "Fetched image successfully!"
@@ -100,35 +116,45 @@ export def --env "main pull" [
     if $name != null { $name }
     else { $"($image)-($tag)-($type)" })
 
-  let machine_exists = (machine_exists -t $type --storage-root=($storage_root) $machine)
+  let machine_exists = (
+  try {
+    machine_exists -t $type --storage-root=($storage_root) $machine
+  } catch {
+    error make -u {
+      msg: "Failed checking if machine already exists or not in storage"
+      help: $"Make sure to have access to the ($storage_root) folder"
+    }
+  })
 
   if $machine_exists and (not $override) {
-    error make {
-      msg: "Machine is already in storage or failed detecting it's existance in storage, exiting."
-      help: "Try running the program as root, this might be just a permission issue" 
+    error make -u {
+      msg: "Machine is already in storage"
+      help: "If this is intentional, run with the -f (--override) flag" 
     }
     return
-  } else if ($override) {
+  }
+  if $machine_exists { 
     logger info 'Deleting existing image'
-    main remove --machinectl=($machinectl) --yes=($yes) $machine
+    main remove --machinectl=($machinectl) --yes=($yes) --all $machine
   }
 
   logger info "Pulling machine to storage root..."
-  try {
-    if $machinectl {
+  if $machinectl {
+    try {
       machinectl $"pull-($type)" $"--verify=($verify)" $"($fetched_url)" $"($machine)"
-    } else {
-      http get ($fetched_url) | save -f $"($storage_root)/($machine).($tar_extension)"
-      rm -rf $"($storage_root)/($machine)"
-      mkdir $"($storage_root)/($machine)"
-      tar -x -v -f $"($storage_root)/($machine).($tar_extension)" -C $"($storage_root)/($machine)" 
-      rm -f $"($storage_root)/($machine).($tar_extension)" 
+    } catch {
+      error make -u {
+        msg: "Failure when fetching image due to permission errors"
+        help: "Try rerunning the command without verifications (--verify=no)"
+      }
+      return
     }
-  } catch {
-    error make {
-      msg: "Failure when fetching image due to permission errors"
-      help: ""
-    } 
+  } else {
+    http get ($fetched_url) | save -f $"($storage_root)/($machine).($tar_extension)"
+    rm -rf $"($storage_root)/($machine)"
+    mkdir $"($storage_root)/($machine)"
+    tar -x -f $"($storage_root)/($machine).($tar_extension)" -C $"($storage_root)/($machine)" 
+    rm -f $"($storage_root)/($machine).($tar_extension)" 
   }
 
   logger info "Removing read-only attribute from image"
@@ -136,10 +162,11 @@ export def --env "main pull" [
     # FIXME: I dont know how to make this without machinectl yet! Please do a PR if you do.
     machinectl read-only $"($machine)" "false"
   } catch {
-    error make {
+    error make -u {
       msg: "Failure setting image as writable"
-      help: "Might be either a permission issue or filesystem issue"  
+      help: "Might be either a permission issue or filesystem issue, please report with logs if this happens to you" 
     }
+    return
   }
 
   logger success "Finished pulling machine"

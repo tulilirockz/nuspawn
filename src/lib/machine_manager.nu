@@ -68,14 +68,20 @@ export def run_container [
       mut timeout: int = 0
       while (machinectl --output=json | from json | select machine | find $machine | length) == 0 {
         if $timeout == $timeout_max {
-          logger error "Could not connect to machine, timed out"
+          error make -u {
+            msg: "Could not connect to machine, timed out"
+            help: "Constant failed attempts may happen when running as root"
+          }
           return
         }
         try {
           machinectl -q start $machine
           sleep 1sec
-        } catch { 
-          logger error $"[($machine)] Failure starting machine"
+        } catch {
+          error make -u {
+            msg: $"Failure starting machine ($machine)"
+            help: "You can check your journalctl logs to see if something happened"
+          }
           return
         }
       }
@@ -88,7 +94,8 @@ export def run_container [
   } else {
     (privileged_run
       "systemd-nspawn"
-      "-M" $machine
+      "-q"
+      $"--machine=($machine)"
       $env_binary
       $environment
       $shell_binary 
@@ -109,14 +116,16 @@ export def privileged_run [
 export def machine_exists [
   --storage-root: string
   --type (-t): string
+  --machinectl = false
   machine: string
 ] {
-  return (try {
-    # TODO: implement "any" type for cases where they dont matter
-    match $type {
-      "tar" => ($"($storage_root)/($machine)" | path exists)
-      "raw" => ($"($storage_root)/($machine).($type)" | path exists)
-      _ => true
-    }
-  } catch { true })
+  if $machinectl {
+    return ((machinectl list-images --output=json | from json | where {|e| $e.name == $machine } | length) != 0)
+  }
+
+  return (match $type {
+    "tar" => ($"($storage_root)/($machine)" | path exists)
+    "raw" => ($"($storage_root)/($machine).($type)" | path exists)
+    _ => (($"($storage_root)/($machine)" | path exists) or ($"($storage_root)/($machine).($type)" | path exists))
+  })
 }

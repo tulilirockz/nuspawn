@@ -15,7 +15,11 @@ export def "main remote list" [
       | uniq
       | each { |e| $e | str trim }
   } catch {
-    logger error $"Failed fetching current image information from ($NSPAWNHUB_LIST)"
+    error make -u {
+      msg: $"Failed fetching the latest image list from ($nspawnhub_url)"
+      help: "If this keeps happening when you have a network connection there might be an error with this program itself, make a bug report"
+    }
+    return
   }
 }
 # List local storage machines
@@ -23,16 +27,17 @@ export def "main list" [
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
   --machinectl (-m) = true # Use machinectl for operations
 ] -> table? {  
-  try {
     let images = (
       if $machinectl { machinectl --output=json list-images | from json } 
-      else { ls -l $storage_root | select name readonly type created })
+      else {
+        ls -l $storage_root | select name readonly type created })
+
     if ($images | length) == 0 {
-      logger error "No images found."
+      error make -u {
+        msg: $"Could not find any images"
+        help: $"You can fetch new images with the \"pull\" or \"oci pull\" commands"
+      }
       return
     }
     $images
-  } catch {
-    logger error "Failure listing machines due to permission issues"
-  }
 }

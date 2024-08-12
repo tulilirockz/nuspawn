@@ -8,7 +8,7 @@ export def "main setup" [
   ...machines: string # Machines to be setup
 ] {
   for machine in $machines {
-    main setup user $machine root --machinectl=$machinectl --description="System Administrator"
+    main setup user $machine --start=true --stop=false root --machinectl=$machinectl --description="System Administrator"
     main setup meta $machine --image=$image  --release=$release --machinectl=$machinectl
     main setup sudo $machine --machinectl=$machinectl
     main setup networking $machine --machinectl=$machinectl
@@ -60,11 +60,11 @@ export def "main setup meta" [
       --start=($start)
       --stop=($stop)
       $machine
-      $"printf \"($variables)\" >> /etc/profile.d/nuspawn.sh"
+      $"stat /etc/profile.d/nuspawn.sh || printf \"($variables)\" >> /etc/profile.d/nuspawn.sh"
       $"mkdir -p ($NUSPAWN_CONTAINER_PATH)"
       $"echo 1 >> ($NUSPAWN_CONTAINER_PATH)/container"
-      "echo 'VARIANT_ID=container' >> /etc/os-release"
-      $"echo '($image):($release)' > ($NUSPAWN_CONTAINER_PATH)/meta-distro.txt" e>| ignore) 
+      "grep VARIANT_ID=container /etc/os-release || printf 'VARIANT_ID=container' >> /etc/os-release"
+      $"stat ($NUSPAWN_CONTAINER_PATH)/meta-distro.txt || echo '($image):($release)' > ($NUSPAWN_CONTAINER_PATH)/meta-distro.txt" e>| ignore) 
   }
 }
 

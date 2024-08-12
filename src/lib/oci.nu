@@ -1,5 +1,7 @@
 use meta.nu [MACHINE_STORAGE_PATH]
 use machine_manager.nu privileged_run
+use remove.nu "main remove"
+use std assert
 use logger.nu *
 
 # Pull an OCI image and import it to machine storage
@@ -9,38 +11,65 @@ export def "main oci pull" [
   --runtime (-r) = "docker" # Selected runtime to get the image
   --extract (-e) = true # Extract the image after fetching it
   --force (-f) # Force override if image already exists
+  --machinectl (-m) = true # Use machinectl for operations
   image: string # OCI image that will be fetched/stored
-  name: string = "out" # Machine name that will be output from the image
+  name: string # Machine name that will be output from the image
 ] {
+  try {
+    run-external $runtime info | ignore
+  } catch {
+    error make -u {
+      msg: test
+    }
+    return
+  }
+
   let image_already_fetched = (try { ($"($tmpdir)/($name).tar" | path exists) } catch { false })
   if $image_already_fetched {
     logger warning "Image has already been fetched to temporary directory, skipping."
-  } else {
-    logger info $"Creating container through ($runtime)"
-    let fetched_image = (run-external $runtime create $image)
-    logger info $"Exporting image to machine storage"
+  } 
+  
+  logger info $"Creating container through ($runtime)"
+  let fetched_image = (run-external $runtime create $image)
+  
+  logger info $"Exporting image to machine storage"
+  run-external $runtime export $fetched_image $'--output=($tmpdir)/($name).tar'
+
+  mut image_already_imported = (
     try {
-      run-external $runtime export $fetched_image $'--output=($tmpdir)/($name).tar'
+      machine_exists -t tar --machinectl=($machinectl) --storage-root=($storage_root) $name
     } catch {
-      logger error "Failure exporting image storage to machine storage"
+      error make -u {
+        msg: "Failed checking if machine already exists or not in storage"
+        help: $"Make sure to have access to the ($storage_root) folder"
+      }
       return
     }
-  }
-  
-  let image_already_imported = (machine_exists -t "tar" --storage-root=($storage_root) $name)
-  if not $image_already_imported {
-    logger error "Image already imported to storage"
+  )
+
+  if $image_already_imported and (not $force) {
+    error make -u {
+      msg: "Image already imported to storage"
+      help: "If this was intentional, rerun with the --force argument"
+    }
     return
+  } else if ($image_already_imported) and ($force) {
+    main remove $name --yes --force -t "tar" --all
+    $image_already_imported = false
   }
-  if $extract and $image_already_imported {
-    logger info "Extracting image rootfs as machine"
+
+  if $extract and not $image_already_imported {
+    logger debug "Extracting image rootfs as machine"
     try {
       privileged_run "mkdir" "-p" $"($storage_root)/($name)"
-      privileged_run "tar" "xf" $"($tmpdir)/($name).tar" "-C" $"($storage_root)/($name)"
+      privileged_run "tar" "-x" "-f" $"($tmpdir)/($name).tar" "-C" $"($storage_root)/($name)"
     } catch {
-      logger error "Failure extracting container image to machine storage"
+      error make -u {
+        msg: "Could not add image to storage due to permission issues"
+        help: "Try running as a privileged user"
+      }
       return
     }
+    logger success $"Successfully imported machine ($image) as ($name)"
   }
-  logger success $"Successfully imported machine ($image) as ($name)"
 }

@@ -32,7 +32,7 @@ export def "main stop" [
 
   let stopcmd = (if $kill { "kill" } else { "stop" })
   for machine in $machines {
-    logger info $"[($machine)] Stopping"
+    logger info $"Stopping ($machine)" 
     if $machinectl {
       try { machinectl -q $stopcmd $machine e>| ignore }
       return

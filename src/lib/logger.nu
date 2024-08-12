@@ -7,6 +7,7 @@ export def "logger info" [...data: string] {
 export def "logger success" [...data: string] {
   logger raw (ansi green_bold) ...$data
 }
+# Prefer "error make" instead of this due to the possibility of using "try { }" blocks in the code!
 export def "logger error" [...data: string] {
   logger raw (ansi red_bold) ...$data
 }

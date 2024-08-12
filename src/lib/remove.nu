@@ -4,10 +4,13 @@ use logger.nu *
 use machine_manager.nu [machinectl machine_exists]
 use start.nu ["main stop"]
 use std assert
+
 # Delete a machine or image
 export def "main remove" [
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
+  --prune-all # Remove all images from storage
+  --clean = true # Remove fetched hidden images
   --yes (-y) # Do not warn when deleting machine
   --all (-a) # Delete configuration for the machine too
   --kill (-k) # Send sigkill to systemd-nspawn unit for machine
@@ -17,46 +20,99 @@ export def "main remove" [
   ...machines: string # Machines to be deleted
 ] -> null {
   assert ($type == "tar" or $type == "raw") "The only valid machine types are tar or raw"
-  for machine in $machines {
-    let machine_exists = (machine_exists --storage-root=($storage_root) -t $type $machine)
 
-    if (not $yes) and ($machine_exists) {
-      let yesno = (input $"(ansi blue_bold)Do you really wish to delete the selected image? \(($machine)\) [y/N]: (ansi reset)")
+  if $prune_all {    
+    if not $yes {      
+      let yesno = (input $"(ansi blue_bold)Do you wish to delete all your local images? [N]: (ansi reset)" | str trim | str downcase)
 
       match $yesno {
-        YES|yes|Yes|Y|y => { }
+        yes | y => { }
+        _ => { return }
+      }
+    }
+
+    logger warning $"Deleting images and configurations"
+    if $machinectl {
+      try {
+        machinectl --output=json list-images | from json | select name | get name | machinectl remove ...$in
+      } catch { |err|
+        error make -u { msg: $"Could not remove machine from storage, exited with error: ($err.msg)" }
+      }
+    } else {
+      try {
+        rm -rfv --interactive=(not $yes) ...(glob $"($storage_root)/*") ...(glob $"($config_root)/*")
+      } catch { |err|
+        error make -u { 
+          msg: $"Could not remove machine from storage, exited with error: ($err.msg)"
+          help: "Try running as a privileged user"
+        }
+      }
+    }
+    if $clean and $machinectl {
+      try { machinectl clean }
+    }
+    logger success "Machines successfully removed from your system"
+    return
+  }
+  
+  for machine in $machines {
+    let machine_exists = (
+      try {
+        machine_exists --machinectl=($machinectl) --storage-root=($storage_root) -t $type $machine
+      } catch {
+        error make -u {
+          msg: "Failed checking if machine already exists or not in storage"
+          help: $"Make sure to have access to the ($storage_root) folder"
+        }
+        return
+      })
+
+    if (not $yes) and ($machine_exists) {
+      let yesno = (input $"(ansi blue_bold)Do you really wish to delete the selected image? \(($machine)\) [y/N]: (ansi reset)" | str trim | str downcase)
+
+      match $yesno {
+        yes | y => { }
         _ => { return }
       }
     } else if (not $machine_exists) {
-      logger info $"Machine [($machine)] does not exist"
+      error make -u {
+        msg: $"Machine ($machine) does not exist in storage"
+        help: "Either you do not have this image, or maybe you didn't setup the storage root properly"
+      }
       return
     }
 
-    (main 
+    logger info "Making sure the machine is stopped"
+    NUSPAWN_LOG=0 (main 
       stop
       --kill=($kill)
       --machinectl=($machinectl)
       $machine)
 
-    logger warning $"Removing machine [($machine)] (if $all { 'and configurations' })"
+    logger warning $"Removing machine ($machine) (if $all { 'and configurations' }), this can take a while"
     if $machinectl {
       try {
         machinectl remove $machine
-      } catch {
-        logger error "Could not remove machine from storage"
+      } catch { |err|
+        error make -u { msg: $"Could not remove machine from storage, exited with error: ($err.msg)" }
         return
       }
-      logger success "Machine succesfully removed"
-      return
-    }   
-    try { rm -fivr ...(glob $"($storage_root)/($machine)*") } catch {
-      logger error "Could not remove machine from storage"
-      return
-    }
-    if $all {
-      try { rm -fivr ...(glob $"($config_root)/($machine)*") } catch {
-        logger error "Could not remove machine configuration from storage"
+    } else {  
+      try { rm -fivr ...(glob $"($storage_root)/($machine)*") } catch { |err|
+        error make -u { 
+          msg: $"Could not remove machine from storage, exited with error: ($err.msg)"
+          help: "Try running as a privileged user"
+        }
         return
+      }
+      if $all {
+        try { rm -fivr ...(glob $"($config_root)/($machine)*") } catch { |err|
+          error make -u { 
+            msg: $"Could not remove machine from storage, exited with error: ($err.msg)"
+            help: "Try running as a privileged user"
+          }
+          return
+        }
       }
     }
     logger success "Machine succesfully removed"

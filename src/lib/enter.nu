@@ -10,7 +10,10 @@ use start.nu ["main stop"]
 export def --env "main enter" [
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
   --no-set-xdg # Set XDG variables by default
-  --extra-bind: string # Extra paths for binding to the container (comma separated list of paths) 
+  --ro-binds # Set the binds to be read-only
+  --ro-overlays # Set the overlays to be read-only
+  --extra-bind: string # Extra paths for binding to the container (comma separated list of paths)
+  --extra-overlay: string # Extra overlay paths for the container (comma separated list of paths) 
   --extra-env: string # Extra environment variables to pass to the container (comma separated list) 
   --machinectl (-m) = false # Use machinectl for operations instead of machinectl
   --boot # Force booting for machine when not using machinectl 
@@ -22,7 +25,8 @@ export def --env "main enter" [
   --hostname: string # Hostname that the machine will get
   --type: string = "tar" # Type of the machine (change this if running into checking errors) can be one of "raw" | "image" or "tar" | "directory"
   --runner: string = "nspawn" # Runner of the machine: nspawn or vmspawn
-  --kill = true # Kill machine if it is already running
+  --no-kill # Do not kill machine preemptively before running launcher command
+  --yes # Do not print any confirmation prompts 
   machine: string # Name of the target to be logged into (either a directory, machine name, or image name)
   ...args: string
 ] {   
@@ -34,8 +38,8 @@ export def --env "main enter" [
   # sudo does not work properly if you dont set this in the nspawn runner
   let hostname = (if $hostname != null { $hostname } else { $"(run-external hostname | complete | get stdout | str trim).($machine)" })
 
-  if not (machine_exists $machine --storage-root=($storage_root) -t "tar") {
-    let yesno = (input $"(ansi blue_bold)[($NAME)] Machine does not seem to be initialized, do you want to initialize a default ($DEFAULT_MACHINE) ($DEFAULT_RELEASE) machine? [Y/n]: (ansi reset)")
+  if not (machine_exists $machine --machinectl=true --storage-root=($storage_root) -t "tar") {
+    let yesno = if $yes { "Y"} else {(input $"(ansi blue_bold)[($NAME)] Machine does not seem to be initialized, do you want to initialize a default ($DEFAULT_MACHINE) ($DEFAULT_RELEASE) machine? [Y/n]: (ansi reset)")}
 
     match $yesno {
       Y|Yes|yes|y => { }
@@ -43,17 +47,16 @@ export def --env "main enter" [
     }
     
     (main 
-      init
+      pull
       --override=true
-      --override-config=true
-      --machinectl=true
+      --machinectl=($machinectl)
       --name=($machine) 
       $DEFAULT_MACHINE
       $DEFAULT_RELEASE)
     return
   }
 
-  if $kill {
+  if not $no_kill {
     NUSPAWN_LOG=0 main stop --machinectl=($machinectl) $machine
   }
 
@@ -79,7 +82,6 @@ export def --env "main enter" [
     "--set-credential=firstboot.locale:C.UTF-8"
     "--set-credential=passwd.hashed-password.root:"
     $"--set-credential=passwd.hashed-password.($user):"
-    $"--machine=($machine)"
     $"--hostname=($hostname)"
     $"--private-users=(if $no_user_bind { "no" } else { "pick" })"
     $"--private-users-ownership=auto"
@@ -87,17 +89,16 @@ export def --env "main enter" [
     "--resolv-conf=replace-stub"
     (if $boot { "--boot" } else { $"--chdir=($env.PWD? | default "/home")" } )
     (if not $no_user_bind { $"--bind-user=($user)" } else { "--private-users=no" })
-    ...($args)
   ]
 
   # These only run when explicit values are set due to the "machine" type (the default thing, without explicit values) interpreting paths in /var/lib/machines. 
   # If someone is setting the type to these explicit ones, they want the path parsing instead of --machine parsing.
   if ($type == "directory") {
-
+    $final_args = ($final_args | append [$"--directory=($machine)"])
   } else if ($type == "image") {
-
+    $final_args = ($final_args | append [$"--image=($machine)"])
   } else if ($type == "tar" or $type == "raw") {
-
+    $final_args = ($final_args | append [$"--machine=($machine)"])
   }
 
   if ($run_user) {
@@ -132,12 +133,15 @@ export def --env "main enter" [
   }  
 
   if ($extra_bind != "" and $extra_bind != null) {
-    $final_args = ($final_args | append ($extra_bind | split row "," | each {|e| $"--bind=($e)"}))
+    $final_args = ($final_args | append ($extra_bind | split row "," | each {|e| $"--bind(if $ro_binds {"-ro"} else {""})=($e)"}))
   }
   if ($extra_env != "" and $extra_env != null) {
     $final_args = ($final_args | append ($extra_env | split row "," | each {|e| $"--setenv=($e)"}))
   }
+  if ($extra_overlay != "" and $extra_overlay != null) {
+    $final_args = ($final_args | append ($extra_overlay | split row "," | each {|e| $"--overlay(if $ro_overlays {"-ro"} else {""})=($e)"}))
+  }
 
   logger debug $"($final_args)"
-  privileged_run ...($final_args)
+  privileged_run ...($final_args) ...($args)
 }

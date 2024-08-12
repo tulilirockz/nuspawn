@@ -34,14 +34,20 @@ export def "main config apply" [
         }   
       }
     } catch {
-      logger error "Failure checking if machine exists due to permission errors"
+      error make -u {
+        msg: "Failed checking if machine already exists or not in storage"
+        help: $"Make sure to have access to the ($config_root) folder"
+      }
       return
     }
 
     try {
       mkdir ($config_root | path dirname)
     } catch {
-      logger error "Failure creating configuration path due to permission errors."
+      error make -u {
+        msg: "Failed creating configuration root folder"
+        help: $"Make sure to have access to the ($config_root) parent folder"
+      }
       return
     }
     
@@ -51,17 +57,23 @@ export def "main config apply" [
     }
 
     if ($target_config_path | path exists) and (not $force) {
-      logger error $"Not overriding existing configuration in ($target_config_path)"
+      error make -u {
+        msg: "The configuration file already exists"
+        help: $"If this was intentional, rerun with the --force argument"
+      }
       return
     }
 
     try {
       cp -f $configuration $target_config_path
     } catch {
-      logger error "Failure when applying configuration to machine"
+      error make -u {
+        msg: "Failed applying configuration to machine"
+        help: $"Make sure to have access to the ($config_root) folder"
+      }
       return
     }
-    logger success $"[($machine)] Applied configuration to machine"
+    logger success $"Applied configuration to machine ($machine)"
   }
 }
 # Modify machine configuration
@@ -84,7 +96,10 @@ export def --env "main config edit" [
     }
     run-external $editor $target_config_path
   } catch {
-    logger error $"Failure when editing configuration file, check if configuration exists in ($target_config_path)"
+    error make -u {
+      msg: "Failed opening configuration file for editing, make sure it exists"
+      help: $"Also make sure to have access to the ($config_root) folder"
+    }
     return
   }
 
@@ -100,7 +115,7 @@ export def "main config remove" [
     let target_config_path = (get_config_path $config_root $machine)
 
     if not ( $target_config_path | path exists) {
-      logger error $"[($machine)] Could not find configuration file for machine"
+      logger warning $"[($machine)] Could not find configuration file for machine"
       continue
     }
 
@@ -117,27 +132,23 @@ export def "main config remove" [
     try {
       rm -rvf $target_config_path 
     } catch {
-      logger error $"Failure when deleting configuration ($target_config_path)"
-      continue
+      logger warning $"Failed deleting configuration file for machine ($config_root)"
+      return
     }
   }
 }
 # List all existing configurations
 export def "main config list" [  
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
-  prefix: string = "" # Prefix for machines that will be shown
 ] {
   try {
-    mkdir ($config_root | path dirname)
+    ls -l $config_root | where {|e| ($e.type == "file") and ($e.name | str ends-with $".($CONFIG_EXTENSION)")}
   } catch {
-    logger error "Failure creating configuration path due to permission errors."
+    error make -u {
+      msg: $"Failed listing configuration files"
+      help: $"Make sure to have access to the ($config_root) folder"
+    }
     return
-  }
-
-  try {
-    ls -l $config_root | where {|e| ($e.type == "file") and ($e.name | str ends-with $".($CONFIG_EXTENSION)") and ($e.name | str starts-with $prefix)}
-  } catch {
-    logger error $"Failed listing configurations due to permission errors"
   }
 }
 # Show configuration for a machine
@@ -149,8 +160,6 @@ export def "main config show" [
   for machine in $machines {
     let target_config_path = (get_config_path $config_root $machine)
 
-    try { mkdir ($target_config_path | path dirname) }
-
     logger info $"[($machine)] Configuration in ($target_config_path)"
     try {
       if $machinectl {
@@ -159,7 +168,11 @@ export def "main config show" [
       }
       print (open $target_config_path | lines | str trim) 
     } catch {
-      logger error "Failure reading configuration due to permission errors."
+      error make -u {
+        msg: $"Failed reading configuration file"
+        help: $"Make sure to have access to the ($config_root) folder"
+      }
+      return
     }
   }
 }

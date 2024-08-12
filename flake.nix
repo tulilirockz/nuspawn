@@ -32,6 +32,8 @@
           packages = with pkgs; [
             nushell
             gitFull
+            scdoc
+            scd2html
           ];
         };
       });
