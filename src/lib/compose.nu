@@ -5,6 +5,7 @@ use start.nu ["main start" "main stop"]
 use setup.nu ["main setup"]
 use remove.nu ["main remove"]
 use pull.nu ["main pull"]
+use oci.nu ["main oci pull"]
 use machine_manager.nu [CONFIG_EXTENSION, run_container, systemctl, machine_exists]
 use manifest.nu [get_cached_file, get_machines_from_manifest]
 
@@ -25,6 +26,7 @@ export def --env "main compose up" [
   --config (-c): string # Fallback configuration for all parsed images
   --user (-u): string = "root" # Default user to operate on machines
   --verify (-v): string = "checksum" # Fallback mode to verify images once pulled 
+  --oci-runtime: string = "docker" # OCI runtime that the oci pull command will use if necessary
   --yes (-y) # Skip any input questions and just confirm them
   --no-setup (-s) = false # Do not do default setup for machines
   ...manifests: string # Manifests to be used
@@ -50,21 +52,33 @@ export def --env "main compose up" [
         }
         continue
       }
-      
-      (main
-        pull
-        --machinectl=($machinectl)
-        --nspawnhub-url=($machine.nspawnhub_url? | default $nspawnhub_url) 
-        --verify=($machine.verify? | default $verify) 
-        --from-url=($machine.from-url?)
-        --config-root=($config_root) 
-        --storage-root=($storage_root)
-        --override=($force)
-        --yes=($yes)
-        --name=($machine.name) 
-        $machine.image? 
-        $machine.tag?
-      )
+
+      if ($machine.oci? | default false) {
+        (main oci pull
+          --machinectl=($machinectl)
+          --force=($force)
+          --extract=true
+          --runtime=($oci_runtime)
+          $"($machine.image?)($machine.tag?)"
+          $machine.name
+        )
+      } else {
+        (main
+          pull
+          --machinectl=($machinectl)
+          --nspawnhub-url=($machine.nspawnhub_url? | default $nspawnhub_url) 
+          --verify=($machine.verify? | default $verify) 
+          --from-url=($machine.from-url?)
+          --config-root=($config_root) 
+          --storage-root=($storage_root)
+          --override=($force)
+          --yes=($yes)
+          --name=($machine.name) 
+          $machine.image? 
+          $machine.tag?
+        )
+      }
+            
       
       if (not ($machine.no_setup? | default false)) or (not $no_setup) {
         logger info "Setting up machine"
