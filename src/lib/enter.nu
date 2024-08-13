@@ -27,6 +27,7 @@ export def --env "main enter" [
   --runner: string = "nspawn" # Runner of the machine: nspawn or vmspawn
   --no-kill # Do not kill machine preemptively before running launcher command
   --yes # Do not print any confirmation prompts 
+  --nvidia # Add binds for nvidia driver support
   machine: string # Name of the target to be logged into (either a directory, machine name, or image name)
   ...args: string
 ] {   
@@ -86,6 +87,7 @@ export def --env "main enter" [
     $"--private-users=(if $no_user_bind { "no" } else { "pick" })"
     $"--private-users-ownership=auto"
     "--keep-unit"
+    "--link-journal=try-guest"
     "--resolv-conf=replace-stub"
     (if $boot { "--boot" } else { $"--chdir=($env.PWD? | default "/home")" } )
     (if not $no_user_bind { $"--bind-user=($user)" } else { "--private-users=no" })
@@ -131,6 +133,64 @@ export def --env "main enter" [
       "/home"
     ] | each {|e| $"--bind=($e)"}))
   }  
+
+  if $nvidia {
+    # Taken from the arch wiki, not tested yet :(
+
+    $final_args = ($final_args | append ([
+      "/dev/nvidia0"
+      "/dev/nvidiactl"
+      "/dev/nvidia-modeset"
+      "/usr/bin/nvidia-bug-report.sh"
+      "/usr/bin/nvidia-cuda-mps-control"
+      "/usr/bin/nvidia-cuda-mps-server"
+      "/usr/bin/nvidia-debugdump"
+      "/usr/bin/nvidia-modprobe"
+      "/usr/bin/nvidia-ngx-updater"
+      "/usr/bin/nvidia-persistenced"
+      "/usr/bin/nvidia-powerd"
+      "/usr/bin/nvidia-sleep.sh"
+      "/usr/bin/nvidia-smi"
+      "/usr/bin/nvidia-xconfig"
+      "/usr/lib/gbm/nvidia-drm_gbm.so"
+      "/usr/lib/libEGL_nvidia.so"
+      "/usr/lib/libGLESv1_CM_nvidia.so"
+      "/usr/lib/libGLESv2_nvidia.so"
+      "/usr/lib/libGLX_nvidia.so"
+      "/usr/lib/libcuda.so"
+      "/usr/lib/libnvcuvid.so"
+      "/usr/lib/libnvidia-allocator.so"
+      "/usr/lib/libnvidia-cfg.so"
+      "/usr/lib/libnvidia-egl-gbm.so"
+      "/usr/lib/libnvidia-eglcore.so"
+      "/usr/lib/libnvidia-encode.so"
+      "/usr/lib/libnvidia-fbc.so"
+      "/usr/lib/libnvidia-glcore.so"
+      "/usr/lib/libnvidia-glsi.so"
+      "/usr/lib/libnvidia-glvkspirv.so"
+      "/usr/lib/libnvidia-ml.so"
+      "/usr/lib/libnvidia-ngx.so"
+      "/usr/lib/libnvidia-opticalflow.so"
+      "/usr/lib/libnvidia-ptxjitcompiler.so"
+      "/usr/lib/libnvidia-rtcore.so"
+      "/usr/lib/libnvidia-tls.so"
+      "/usr/lib/libnvidia-vulkan-producer.so"
+      "/usr/lib/libnvoptix.so"
+      "/usr/lib/modprobe.d/nvidia-utils.conf"
+      "/usr/lib/nvidia/wine/_nvngx.dll"
+      "/usr/lib/nvidia/wine/nvngx.dll"
+      "/usr/lib/nvidia/xorg/libglxserver_nvidia.so"
+      "/usr/lib/vdpau/libvdpau_nvidia.so"
+      "/usr/lib/xorg/modules/drivers/nvidia_drv.so"
+      "/usr/share/X11/xorg.conf.d/10-nvidia-drm-outputclass.conf"
+      "/usr/share/dbus-1/system.d/nvidia-dbus.conf"
+      "/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json"
+      "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
+      "/usr/share/licenses/nvidia-utils/LICENSE"
+      "/usr/share/vulkan/icd.d/nvidia_icd.json"
+      "/usr/share/vulkan/implicit_layer.d/nvidia_layers.json"
+    ] | each {|e| $"--bind=($e)"}))
+  }
 
   if ($extra_bind != "" and $extra_bind != null) {
     $final_args = ($final_args | append ($extra_bind | split row "," | each {|e| $"--bind(if $ro_binds {"-ro"} else {""})=($e)"}))
