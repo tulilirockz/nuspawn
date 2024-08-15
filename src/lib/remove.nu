@@ -54,7 +54,8 @@ export def "main remove" [
     logger success "Machines successfully removed from your system"
     return
   }
-  
+
+  assert ($machines != null) "A machine should be specified"
   for machine in $machines {
     let machine_exists = (
       try {
@@ -68,7 +69,7 @@ export def "main remove" [
       })
 
     if (not $yes) and ($machine_exists) {
-      let yesno = (input $"(ansi blue_bold)Do you really wish to delete the selected image? \(($machine)\) [y/N]: (ansi reset)" | str trim | str downcase)
+      let yesno = (input $"(ansi blue_bold)Do you wish to delete the selected image \"($machine)\"? \(($machine)\) [y/N]: (ansi reset)" | str trim | str downcase)
 
       match $yesno {
         yes | y => { }
@@ -89,7 +90,7 @@ export def "main remove" [
       --machinectl=($machinectl)
       $machine)
 
-    logger warning $"Removing machine ($machine) (if $all { 'and configurations' }), this can take a while"
+    logger warning $"Removing machine ($machine)(if $all { ' and configurations' }), this can take a while"
     if $machinectl {
       try {
         machinectl remove $machine

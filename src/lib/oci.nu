@@ -1,5 +1,5 @@
 use meta.nu [MACHINE_STORAGE_PATH]
-use machine_manager.nu privileged_run
+use machine_manager.nu [machine_exists, privileged_run]
 use remove.nu "main remove"
 use std assert
 use logger.nu *
@@ -19,7 +19,8 @@ export def "main oci pull" [
     run-external $runtime info | ignore
   } catch {
     error make -u {
-      msg: test
+      msg: "Failed finding OCI runtime in $PATH"
+      help: "Try installing podman or docker first. If you already have one of those installed, add them to your $PATH variable"
     }
     return
   }
@@ -38,7 +39,7 @@ export def "main oci pull" [
   mut image_already_imported = (
     try {
       machine_exists -t tar --machinectl=($machinectl) --storage-root=($storage_root) $name
-    } catch {
+    } catch { |err|
       error make -u {
         msg: "Failed checking if machine already exists or not in storage"
         help: $"Make sure to have access to the ($storage_root) folder"

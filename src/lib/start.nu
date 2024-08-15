@@ -34,9 +34,9 @@ export def "main stop" [
   for machine in $machines {
     logger info $"Stopping ($machine)" 
     if $machinectl {
-      try { machinectl -q $stopcmd $machine e>| ignore }
+      machinectl -q $stopcmd $machine
       return
     }
-    try { systemctl $stopcmd $"systemd-nspawn@($machine)" }
+    systemctl $stopcmd $"systemd-nspawn@($machine)"
   }
 }

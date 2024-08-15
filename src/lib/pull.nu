@@ -28,7 +28,7 @@ export def --env "main pull" [
   --from-path (-p): path # Import image from local path
   --machinectl (-m) = true # Use machinectl for operations
   --yes (-y) # Skip any input questions and just confirm them
-  --fetch: string # Fetch image to path instead of pulling to machine storage
+  --fetch-to: string # Fetch image to path instead of pulling to machine storage
   --tar-extension: string = "tar.xz" # Extension when fetching tar images (only needed with machinectl=false)
   image?: string = DEFAULT_MACHINE
   tag?: string = DEFAULT_RELEASE
@@ -97,10 +97,10 @@ export def --env "main pull" [
     return
   }
 
-  if $fetch != null {
+  if $fetch_to != null {
     logger info "Fetching image to out path..."
     try {
-      http get $fetched_url | save -f $fetch
+      http get $fetched_url | save -f $fetch_to
     } catch {
       error make -u {
         msg: "Failure fetching image"
@@ -118,8 +118,9 @@ export def --env "main pull" [
 
   let machine_exists = (
   try {
-    machine_exists -t $type --storage-root=($storage_root) $machine
-  } catch {
+    machine_exists -t $type --machinectl=($machinectl) --storage-root=($storage_root) $machine
+  } catch { |err|
+    print $err
     error make -u {
       msg: "Failed checking if machine already exists or not in storage"
       help: $"Make sure to have access to the ($storage_root) folder"

@@ -1,3 +1,13 @@
+export extern journalctl [
+  --output: string
+  ...args: string
+]
+export extern systemd-cgls [
+  ...args: string
+]
+export extern systemd-cgtop [
+  ...args: string
+]
 export extern machinectl [
   --verify: string = "no"
   --output: string

@@ -12,68 +12,40 @@ dP     dP `88888P'  Y88888P  88Y888P' `88888P8 8888P Y8P  dP    dP    8P
 [![Copr build status](https://copr.fedorainfracloud.org/coprs/tulilirockz/nuspawn/package/nuspawn/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/tulilirockz/nuspawn/package/nuspawn/)
 [![License: 3-BSD](https://img.shields.io/github/license/tulilirockz/nuspawn?style=plastic&style=social)](https://github.com/tulilirockz/nuspawn/blob/main/LICENSE)
 
-A [Nushell](https://nushell.sh) wrapper over systemd-nspawn and machinectl initially inspired by the the [nspawn](https://github.com/nspawn/nspawn/tree/master) nspawnhub wrapper script meant to make usage easier and more integrated with [nspawn.org](https://nspawn.org/) (nspawnhub)
-
-We aim to make this as self-contained with as few dependencies as possible, using just the [nushell](https://nushell.sh) and few binaries like [machinectl](https://www.freedesktop.org/software/systemd/man/latest/machinectl.html), [gpg](https://www.gnupg.org/) and GNU tar (optionally).
-
-## Version Requirements
-
-This project, as of release 0.7.5, requires nushell 0.93 and systemd v256 to work properly due to utility functions and unprivileged systemd-nspawn containers, it will work fine on other versions, but youll need to confirm every time you run your container 
+A [Nushell](https://nushell.sh) wrapper over systemd-nspawn and machinectl initially inspired by the the [nspawn](https://github.com/nspawn/nspawn/tree/master) nspawnhub wrapper script meant to make usage easier and more integrated with [nspawn.org](https://nspawn.org/) (nspawnhub) and other registries
 
 ## Usage
 
-### Initializing your first container
+![Video usage example](./assets/demo.gif)
+
+### Initializing your first machine
 
 ```bash
-nuspawn remote list # Table of all the available distros
+nuspawn remote list # Table of all the available distros on nspawnhub
 
-# This should be the minimum necessary to pull your image, from there you can use machinectl.
-nuspawn init
-machinectl start debian-sid-tar
-machinectl login debian-sid-tar
+nuspawn pull --name $NAME $IMAGE $TAG # Pull your machine from 
+nuspawn oci pull $NAME:$TAG # You can also pull OCI images from DockerHub or anywhere else to get a machine
 
-# Advanced usage example: Importing a nspawn configuration to the container and verifiying using the nspawnhub gpg key
-nuspawn init debian sid --name "mydebbox" --config=./distrobox-like.nspawn.ini
+nuspawn setup $NAME # (optional) Sets up networking, users and other things in the machine manually if necessary (you should have networking by default)
+
+nuspawn enter $NAME
 ```
 
-### Composing machines
+### Status of the machines
 
-You can also declare your Nspawn machines in YAML manifests to have them automatically configured by running `nuspawn compose create $MANIFEST_PATH`
-
-```yaml
-
-# Version is required due to future breaking changes, it will not let you use old versions on newer versions, not letting you just break the application
-version: '0.7'
-
-# Notice that you can declare multiple machines here!
-machines: 
-  - name: debox
-    image: debian
-    tag: sid
-    type: raw
-    config: null # Configuration file copied from $PWD/$FILE
-    nspawnhub_url: null # You can also specify a custom URL for a specific image
-    env: # Environment variables for init_commands
-      - DEBIAN_FRONTEND=noninteractive
-    init_commands: # Will run when creating the container, not when logging in through machinectl login 
-      - rm -f /etc/apt/apt.conf.d/docker-gzip-indexes /etc/apt/apt.conf.d/docker-no-languages
-      - apt update -y && apt upgrade -y 
-      - apt install -y cockpit
-    inline_config: | # Will be copied to /etc/systemd/nspawn/$MACHINE.nspawn before anything runs, more info in `systemd.nspawn(5)`
-      [Network]
-      VirtualEthernet=no
-    properties: # Systemd service properties, see `systemd.exec(5)`
-      - MemoryMax=2G
+You can check machine data through these troubleshooting commands 
+```bash
+nuspawn status # Which machines are actually running at any point
+nuspawn log # Fancy table of the systemd journal in the machine
+nuspawn top # top-like TUI with machine processes
+nuspawn ps # Lists all processes in the machine + control groups (requires systemd in the machine + --boot flag)
 ```
 
-More examples in the `example/` directory.
-
-### Config
+### Configuring machines
 
 You can configure your machines through the `config` subcommands, by `edit`ing, `apply`ing, or `remove`ing nspawn configurations
 
 ```bash
-nuspawn init debian sid --name debox # You can also specify --config=(path) to set up a configuration when initializing
 nuspawn config list # To check every configuration already applied to images
 nuspawn config apply ./example/config/distrobox-like.ini debox # Creates a configuration for the machine after install
 nuspawn config edit debox # Will open nano (by default) for editing the machine's configuration file
@@ -86,29 +58,61 @@ nuspawn config remove debox # Removes any configuration set for `systemd-nspawn@
 You can fetch images locally without adding them to the systemd-nspawn machine directory by using `nuspawn fetch`
 
 ```bash
-nuspawn fetch debian sid # From here you can either extract a tarball, or use mount.ddi to check the image contents
+nuspawn pull --fetch-to=./debian.tar --type tar debian sid .
 
-nuspawn fetch --extract --type=tar debian sid .
-
-nuspawn fetch --type=raw debian sid .
-systemd-dissect ./debian-sid-raw.raw
+# From here you can either extract a tarball, or use mount.ddi to check the image contents
+tar xvf ./debian.tar -C ./debian
 ```
-
 
 ### Deleting machines
 
 ```bash
-~/opt/tulilirockz/nuspawn/src> nuspawn remove debox
-Do you wish to delete all your local images? [N]:
+$ nuspawn remove debox
+Do you wish to delete the selected image "debox"? [y/N]:
 ```
 
 You can also Prune, which will delete every image from your system, including configurations if specified.
 
 ```bash
-~/opt/tulilirockz/nuspawn/src> nuspawn prune
-[nuspawn] THIS COMMAND WILL CLEAR ALL IMAGES IN LOCAL STORAGE, type YES if you agree to delete everything
-Do you wish to delete all your local images? [N]:
+$ nuspawn remove --prune-all
+Do you wish to delete all your local images? [y/N]:
 ```
+
+### Composing machines
+
+You can also declare your machines in YAML manifests to have them automatically configured by running `nuspawn compose create $MANIFEST_PATH`
+They work with all options from the pull command, meaning you can also use oci images as a base
+
+```yaml
+# Version is required due to future breaking changes
+version: '0.9'
+
+# Notice that you can declare multiple machines here!
+machines: 
+  - name: debox # Required
+    oci: false # If you want to use a docker image instead -> $IMAGE:$TAG, type will not be considered
+    image: debian
+    tag: sid
+    systemd: true # If the distro does not have systemd, we cannot use machinectl to communicate with it, needing to use systemd-nspawn directily
+    no_setup: true # If the automatic setup scripts do not work for some reason you can disable them
+    type: raw # Ignored if OCI=true ("tar" type enforced)
+    config: null # Configuration file copied from /$FILE
+    nspawnhub_url: null # You can also specify a custom URL for a specific image
+    env: # Environment variables for init_commands
+      - DEBIAN_FRONTEND=noninteractive
+    init_commands: # Will run when creating the machine, not when logging in through machinectl login 
+      - rm -f /etc/apt/apt.conf.d/docker-gzip-indexes /etc/apt/apt.conf.d/docker-no-languages
+      - apt update -y && apt upgrade -y
+      - apt install -y sudo systemd-userdbd dbus # These packages are required so that mounting users to the machine works when using the --boot mode
+    inline_config: | # Will be copied to /etc/systemd/nspawn/$MACHINE.nspawn before anything runs, more info in `systemd.nspawn(5)`
+      [Network]
+      VirtualEthernet=no
+    properties: # Systemd service properties, see `systemd.exec(5)`
+      - MemoryMax=2G # You can set a bunch of max properties to the machine, including stuff like RW access to devices
+      - DeviceAllow=/dev/fuse rwm # Allows you to use FUSE within the machine (rclone, docker, etc)
+```
+
+More examples in the `example/` directory.
 
 ## Installing
 
@@ -143,17 +147,17 @@ nix profile install github:tulilirockz/nuspawn#
 ```nix
 {
   inputs = {
-    #...
+    # ...
     nuspawn = {
       url = "github:tulilirockz/nuspawn";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    #...
+    # ...
   }
   outputs = {
-    #...
+    # ...
     # Install the NuSpawn binary in your NixOS configuration by using inputs.nuspawn.packages.${pkgs.system}.nuspawn in environment.systemPackages
-    #...
+    # ...
   }
 }
 ```
@@ -164,6 +168,8 @@ You should be able to install this project by using the `install.nu` script on y
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/tulilirockz/nuspawn/main/install.nu" | nu
+# or
+curl -fsSL "https://raw.githubusercontent.com/tulilirockz/nuspawn/main/install.sh" | sh
 ```
 
 It is NOT recommended to do that, though!
@@ -172,9 +178,14 @@ It is NOT recommended to do that, though!
 
 ### Networking
 
-If you are trying to run your container and cant seem to get networking working, make sure that your configuration doesnt have the VirtualEthernet option enabled, like this:
+If you are trying to run your machine and cant seem to get networking working, make sure that your configuration doesnt have the VirtualEthernet option enabled, like this:
 
 ```ini
 [Network]
 VirtualEthernet=no
 ```
+
+### Others
+
+Any other weird behaviour you encounter may have been explained in the manpages. (TODO)
+The machines really have some weird requirements (e.g.: having systemd-userdbd in order to bound users to get to the machine user database) around systemd to make things work.
