@@ -16,14 +16,17 @@ export def "main remove" [
   --kill (-k) # Send sigkill to systemd-nspawn unit for machine
   --force (-f) # Force deletion/stopping when possible
   --type (-t): string = "tar" # Type of the machine to be deleted
-  --machinectl (-m) = true # Use machinectl for operations 
-  ...machines: string # Machines to be deleted
-] -> null {
+  --machinectl (-m) = false # Use machinectl for operations 
+  machine?: string # Machines to be deleted
+] {
+  if (not $prune_all) {
+    assert ((($machine != null) or ($machine == ""))) "A machine should be specified if not pruning all machines"
+  }
   assert ($type == "tar" or $type == "raw") "The only valid machine types are tar or raw"
 
   if $prune_all {    
     if not $yes {      
-      let yesno = (input $"(ansi blue_bold)Do you wish to delete all your local images? [N]: (ansi reset)" | str trim | str downcase)
+      let yesno = (input $"(ansi blue_bold)Do you wish to delete all your local images? [y/N]: (ansi reset)" | str trim | str downcase)
 
       match $yesno {
         yes | y => { }
@@ -32,22 +35,20 @@ export def "main remove" [
     }
 
     logger warning $"Deleting images and configurations"
-    if $machinectl {
-      try {
+    try {
+      if $machinectl {
         machinectl --output=json list-images | from json | select name | get name | machinectl remove ...$in
-      } catch { |err|
-        error make -u { msg: $"Could not remove machine from storage, exited with error: ($err.msg)" }
-      }
-    } else {
-      try {
+        machinectl clean
+      } else {
         rm -rfv --interactive=(not $yes) ...(glob $"($storage_root)/*") ...(glob $"($config_root)/*")
-      } catch { |err|
-        error make -u { 
-          msg: $"Could not remove machine from storage, exited with error: ($err.msg)"
-          help: "Try running as a privileged user"
-        }
+      }
+    } catch { |err|
+      error make -u { 
+        msg: $"Could not remove machine from storage, exited with error: ($err.msg)" 
+        help: "Try running as a privileged user"
       }
     }
+    
     if $clean and $machinectl {
       try { machinectl clean }
     }
@@ -55,67 +56,60 @@ export def "main remove" [
     return
   }
 
-  assert ($machines != null) "A machine should be specified"
-  for machine in $machines {
-    let machine_exists = (
-      try {
-        machine_exists --machinectl=($machinectl) --storage-root=($storage_root) -t $type $machine
-      } catch {
-        error make -u {
-          msg: "Failed checking if machine already exists or not in storage"
-          help: $"Make sure to have access to the ($storage_root) folder"
-        }
-        return
-      })
-
-    if (not $yes) and ($machine_exists) {
-      let yesno = (input $"(ansi blue_bold)Do you wish to delete the selected image \"($machine)\"? \(($machine)\) [y/N]: (ansi reset)" | str trim | str downcase)
-
-      match $yesno {
-        yes | y => { }
-        _ => { return }
-      }
-    } else if (not $machine_exists) {
+  let machine_exists = (
+    try {
+      machine_exists --machinectl=($machinectl) --storage-root=($storage_root) -t $type $machine
+    } catch {
       error make -u {
-        msg: $"Machine ($machine) does not exist in storage"
-        help: "Either you do not have this image, or maybe you didn't setup the storage root properly"
+        msg: "Failed checking if machine already exists or not in storage"
+        help: $"Make sure to have access to the ($storage_root) folder"
       }
       return
-    }
+    })
 
-    logger info "Making sure the machine is stopped"
+  if (not $yes) and ($machine_exists) {
+    let yesno = (input $"(ansi blue_bold)Do you wish to delete the selected image \"($machine)\"? \(($machine)\) [y/N]: (ansi reset)" | str trim | str downcase)
+
+    match $yesno {
+      yes | y => { }
+      _ => { return }
+    }
+  } else if (not $machine_exists) {
+    error make -u {
+      msg: $"Machine ($machine) does not exist in storage"
+      help: "Either you do not have this image, or maybe you didn't setup the storage root properly"
+    }
+    return
+  }
+
+  logger info "Making sure the machine is stopped"
+  try {
     NUSPAWN_LOG=0 (main 
       stop
       --kill=($kill)
       --machinectl=($machinectl)
       $machine)
-
-    logger warning $"Removing machine ($machine)(if $all { ' and configurations' }), this can take a while"
-    if $machinectl {
-      try {
-        machinectl remove $machine
-      } catch { |err|
-        error make -u { msg: $"Could not remove machine from storage, exited with error: ($err.msg)" }
-        return
-      }
-    } else {  
-      try { rm -fivr ...(glob $"($storage_root)/($machine)*") } catch { |err|
-        error make -u { 
-          msg: $"Could not remove machine from storage, exited with error: ($err.msg)"
-          help: "Try running as a privileged user"
-        }
-        return
-      }
-      if $all {
-        try { rm -fivr ...(glob $"($config_root)/($machine)*") } catch { |err|
-          error make -u { 
-            msg: $"Could not remove machine from storage, exited with error: ($err.msg)"
-            help: "Try running as a privileged user"
-          }
-          return
-        }
-      }
-    }
-    logger success "Machine succesfully removed"
   }
+
+  logger warning $"Removing machine ($machine)(if $all { ' and configurations' }), this can take a while"
+  if $machinectl {
+    try {
+      machinectl remove $machine
+    } catch { |err|
+      error make -u { msg: $"Could not remove machine from storage, exited with error: ($err.msg)" }
+      return
+    }
+  } else {  
+    try { rm -fvr --interactive=(not $yes) ...(glob $"($storage_root)/($machine)*") } catch { |err|
+      error make -u { 
+        msg: $"Could not remove machine from storage, exited with error: ($err.msg)"
+        help: "Try running as a privileged user"
+      }
+      return
+    }
+    if $all {
+      try { rm -fvr --interactive=(not $yes) ...(glob $"($config_root)/($machine)*") }
+    }
+  }
+  logger success $"Machine ($machine) succesfully removed"
 }

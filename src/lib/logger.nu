@@ -4,21 +4,25 @@ use std assert
 export def "logger info" [...data: string] {
   logger raw (ansi blue_bold) ...$data 
 }
+
 export def "logger success" [...data: string] {
   logger raw (ansi green_bold) ...$data
 }
-# Prefer "error make" instead of this due to the possibility of using "try { }" blocks in the code!
-export def "logger error" [...data: string] {
-  logger raw (ansi red_bold) ...$data
-}
+
 export def "logger warning" [...data: string] {
   logger raw (ansi yellow_bold) ...$data
 }
+
+export def "logger dbgerr" [error: record] {
+  logger debug $"Error traced:\n($error | table -e)"
+}
+
 export def --env "logger debug" [...data: string] {
-  if $env.NUSPAWN_DEBUG? != null and $env.NUSPAWN_DEBUG? == "1" {
+  if $env.NUSPAWN_LOG? != null and $env.NUSPAWN_LOG? == "2" {
     logger raw (ansi green_bold) ...$data
   }
 }
+
 export def "logger raw" [color: string, ...data: string] {
   if $env.NUSPAWN_LOG? != null and $env.NUSPAWN_LOG? == "0" {
     return

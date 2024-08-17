@@ -12,7 +12,7 @@ dP     dP `88888P'  Y88888P  88Y888P' `88888P8 8888P Y8P  dP    dP    8P
 [![Copr build status](https://copr.fedorainfracloud.org/coprs/tulilirockz/nuspawn/package/nuspawn/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/tulilirockz/nuspawn/package/nuspawn/)
 [![License: 3-BSD](https://img.shields.io/github/license/tulilirockz/nuspawn?style=plastic&style=social)](https://github.com/tulilirockz/nuspawn/blob/main/LICENSE)
 
-A [Nushell](https://nushell.sh) wrapper over systemd-nspawn and machinectl initially inspired by the the [nspawn](https://github.com/nspawn/nspawn/tree/master) nspawnhub wrapper script meant to make usage easier and more integrated with [nspawn.org](https://nspawn.org/) (nspawnhub) and other registries
+A [Nushell](https://nushell.sh) wrapper over systemd-nspawn and machinectl initially inspired by the the [nspawn](https://github.com/nspawn/nspawn/tree/master) nspawnhub wrapper script meant to make usage easier and more integrated with [nspawn.org](https://nspawn.org/) (nspawnhub) other registries, and make robust and flexible development environments
 
 ## Usage
 

@@ -2,7 +2,7 @@ use meta.nu [NAME, NSPAWNHUB_STORAGE_ROOT, MACHINE_STORAGE_PATH, MACHINE_CONFIG_
 use logger.nu *
 use std assert
 use start.nu ["main start" "main stop"]
-use setup.nu ["main setup"]
+use setup.nu ["main setup all"]
 use remove.nu ["main remove"]
 use pull.nu ["main pull"]
 use oci.nu ["main oci pull"]
@@ -11,11 +11,11 @@ use manifest.nu [get_cached_file, get_machines_from_manifest]
 
 const COMPOSE_VERSION = "0.7"
 
-
 # Compose machines from a compose manifest
 export def "main compose" [] {
   $"Usage: ($NAME) compose <command>..."
 }
+
 # Create new machines from a compose manifest
 export def --env "main compose up" [
   --nspawnhub-url: path = $NSPAWNHUB_STORAGE_ROOT # Fallback NspawnHub URL for images 
@@ -71,9 +71,9 @@ export def --env "main compose up" [
           --from-url=($machine.from-url?)
           --config-root=($config_root) 
           --storage-root=($storage_root)
-          --override=($force)
+          --force=($force)
           --yes=($yes)
-          --name=($machine.name) 
+          $machine.name 
           $machine.image? 
           $machine.tag?
         )
@@ -82,7 +82,7 @@ export def --env "main compose up" [
       
       if (not ($machine.no_setup? | default false)) or (not $no_setup) {
         logger info "Setting up machine"
-        try { main setup --machinectl=($machine.systemd? | default true) $machine.name }
+        try { main setup all --machinectl=($machine.systemd? | default true) $machine.name }
       }
       
       let machine_config_path = $"($config_root)/($machine.name).($CONFIG_EXTENSION)"
@@ -124,18 +124,19 @@ export def --env "main compose up" [
     }
   }
 }
+
 # Delete all images from a compose manifest
 export def "main compose down" [
+  --machinectl (-m) = false # Use machinectl for operations 
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
   --yes (-y) # Do not warn when deleting machine
   --all (-a) # Delete configuration for the machine too
   --force (-f) # Force deletion/stopping when possible
   --type (-t): string = "tar" # Type of the machine to be deleted
-  --machinectl (-m) = true # Use machinectl for operations 
-  ...manifests: string # Machines to be deleted
+  manifest: string # Manifest to be used
 ] {
-  for manifest in $manifests {
+  for machine in (get_machines_from_manifest $manifest) {
     (main
       remove
       --config-root=($config_root)
@@ -145,25 +146,26 @@ export def "main compose down" [
       --force=($force)
       --type=($type)
       --machinectl=($machinectl)
-      ...(get_machines_from_manifest $manifest)
+      $machine
     )
   }
 }
+
 # Start machines from a compose manifest
 export def "main compose start" [
-  --machinectl (-m) = true # Use machinectl for operations
+  --machinectl (-m) = false # Use machinectl for operations
   --force (-f) # Force stopping machine
   --kill (-k) # Send sigkill to machine if using --restart and --force option
-  ...manifests: string # Manifests to be used
+  manifest: string # Manifests to be used
 ] {
-  for manifest in $manifests {
+  for machine in (get_machines_from_manifest $manifest) {
     (main 
       start
       --machinectl=($machinectl)
       --force=($force)
       --kill=($kill)
-      ...(get_machines_from_manifest $manifest)
-    )  
+      $machine
+    )
   }
 }
 
@@ -171,14 +173,14 @@ export def "main compose start" [
 export def "main compose stop" [
   --machinectl (-m) = true # Use machinectl for operations
   --kill (-k) # Send sigkill to systemd-nspawn unit for machine
-  ...manifests: string # Manifests to be used
+  manifest: string # Manifest to be used
 ] {
-  for manifest in $manifests {
+  for machine in (get_machines_from_manifest $manifest) {
     (main 
       stop
       --machinectl=($machinectl)
       --kill=($kill)
-      ...(get_machines_from_manifest $manifest)
+      $machine
     )
   }
 }

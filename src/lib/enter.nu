@@ -1,4 +1,5 @@
 use std assert
+use meta.nu NAME
 use machine_manager.nu [machinectl, run_container, privileged_run, machine_exists]
 use meta.nu [DEFAULT_MACHINE, DEFAULT_RELEASE, NAME, MACHINE_STORAGE_PATH]
 use logger.nu *
@@ -8,14 +9,17 @@ use start.nu ["main stop"]
 #
 # Requires your machine to have a recent version of systemd-userdb if you are binding your current user to the machine
 export def --env "main enter" [
+  --machinectl (-m) = false # Use machinectl for operations instead of machinectl
   --storage-root: path = $MACHINE_STORAGE_PATH # Path where machines are stored
   --no-set-xdg # Set XDG variables by default
   --ro-binds # Set the binds to be read-only
   --ro-overlays # Set the overlays to be read-only
-  --extra-bind: string # Extra paths for binding to the container (comma separated list of paths)
+  --extra-binds: string # Extra paths for binding to the container (comma separated list of paths)
   --extra-overlay: string # Extra overlay paths for the container (comma separated list of paths) 
+  --extra-capabilities: string # Extra capabilities for the container (comma separated list of paths) 
+  --extra-ambient-capabilities: string # Extra ambient capabilities for the container (comma separated list of paths) 
   --extra-env: string # Extra environment variables to pass to the container (comma separated list) 
-  --machinectl (-m) = false # Use machinectl for operations instead of machinectl
+  --drop-capabilities: string # Drop selected capabilities from container for better security or isolation
   --boot # Force booting for machine when not using machinectl 
   --no-user-bind # Use this if you are having issue with user binding
   --no-default-binds # Do not bind any directory or file by default
@@ -28,6 +32,7 @@ export def --env "main enter" [
   --no-kill # Do not kill machine preemptively before running launcher command
   --yes # Do not print any confirmation prompts 
   --nvidia # Add binds for nvidia driver support
+  --host-proc = true # Adds system binds for /proc and /sys on container's /run (unsafe in unprivileged containers)
   machine: string # Name of the target to be logged into (either a directory, machine name, or image name)
   ...args: string
 ] {   
@@ -40,21 +45,10 @@ export def --env "main enter" [
   let hostname = (if $hostname != null { $hostname } else { $"(run-external hostname | complete | get stdout | str trim).($machine)" })
 
   if not (machine_exists $machine --machinectl=true --storage-root=($storage_root) -t "tar") {
-    let yesno = if $yes { "Y"} else {(input $"(ansi blue_bold)[($NAME)] Machine does not seem to be initialized, do you want to initialize a default ($DEFAULT_MACHINE) ($DEFAULT_RELEASE) machine? [Y/n]: (ansi reset)")}
-
-    match $yesno {
-      Y|Yes|yes|y => { }
-      _ => { return }
+    error make -u {
+      msg: "Machine not initialized"
+      help: $"Try fetching a new machine from ($NAME) pull or ($NAME) oci pull"
     }
-    
-    (main 
-      pull
-      --override=true
-      --machinectl=($machinectl)
-      --name=($machine) 
-      $DEFAULT_MACHINE
-      $DEFAULT_RELEASE)
-    return
   }
 
   if not $no_kill {
@@ -130,10 +124,19 @@ export def --env "main enter" [
       "/run/user"
       "/dev/dri"
       "/dev/shm"
+      "/dev/fuse"
       "/home"
     ] | each {|e| $"--bind=($e)"}))
+    
   }  
 
+  if ($host_proc) {
+    $final_args = ($final_args | append ([
+      "/proc:/run/proc"
+      "/sys:/run/sys"
+    ] | each {|e| $"--bind=($e)"}))
+  }
+    
   if $nvidia {
     # Taken from the arch wiki, not tested yet :(
 
@@ -192,8 +195,8 @@ export def --env "main enter" [
     ] | each {|e| $"--bind=($e)"}))
   }
 
-  if ($extra_bind != "" and $extra_bind != null) {
-    $final_args = ($final_args | append ($extra_bind | split row "," | each {|e| $"--bind(if $ro_binds {"-ro"} else {""})=($e)"}))
+  if ($extra_binds != "" and $extra_binds != null) {
+    $final_args = ($final_args | append ($extra_binds | split row "," | each {|e| $"--bind(if $ro_binds {"-ro"} else {""})=($e)"}))
   }
   if ($extra_env != "" and $extra_env != null) {
     $final_args = ($final_args | append ($extra_env | split row "," | each {|e| $"--setenv=($e)"}))
@@ -201,7 +204,15 @@ export def --env "main enter" [
   if ($extra_overlay != "" and $extra_overlay != null) {
     $final_args = ($final_args | append ($extra_overlay | split row "," | each {|e| $"--overlay(if $ro_overlays {"-ro"} else {""})=($e)"}))
   }
-
+  if ($extra_capabilities != "" and $extra_capabilities != null) {
+    $final_args = ($final_args | append $"--capability=($extra_capabilities)")
+  }
+  if ($extra_ambient_capabilities != "" and $extra_ambient_capabilities != null) {
+    $final_args = ($final_args | append $"--ambient-capability=($extra_ambient_capabilities)")
+  }
+  if ($drop_capabilities != "" and $drop_capabilities != null) {
+    $final_args = ($final_args | append $"--drop-capability=($drop_capabilities)")
+  }
   logger debug $"($final_args)"
   privileged_run ...($final_args) ...($args)
 }

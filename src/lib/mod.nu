@@ -13,3 +13,4 @@ export use setup.nu *
 export use start.nu *
 export use oci.nu *
 export use status.nu *
+export use properties.nu *

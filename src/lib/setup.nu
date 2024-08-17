@@ -1,7 +1,12 @@
-use meta.nu [NUSPAWN_CONTAINER_PATH]
+use meta.nu [NUSPAWN_CONTAINER_PATH, NAME]
 
-# Setup a machine for CLI usage
-export def "main setup" [
+# Setup a machine for usage
+export def "main setup" [] {
+  $"Usage: ($NAME) setup <command>..."
+}
+
+# Set up machine with all setup scripts
+export def "main setup all" [
   --machinectl (-m) = false # Use machinectl for operations
   --image: string = "unspecified" # Distro image
   --release: string = "unspecified" # Distro release

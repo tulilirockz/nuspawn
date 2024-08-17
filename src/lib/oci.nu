@@ -25,10 +25,7 @@ export def "main oci pull" [
     return
   }
 
-  let image_already_fetched = (try { ($"($tmpdir)/($name).tar" | path exists) } catch { false })
-  if $image_already_fetched {
-    logger warning "Image has already been fetched to temporary directory, skipping."
-  } 
+  let tmpdir = (mktemp -d -p $tmpdir)
   
   logger info $"Creating container through ($runtime)"
   let fetched_image = (run-external $runtime create $image)

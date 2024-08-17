@@ -1,42 +1,54 @@
 use logger.nu *
 use machine_manager.nu [machinectl, systemctl]
+
 # Start a machine
 export def "main start" [
-  --machinectl (-m) = true # Use machinectl for operations
+  --machinectl (-m) = false # Use machinectl for operations
   --kill (-k) # Send sigkill to machine unit before starting
   --force (-f) # Force stopping machine
-  ...machines: string # Machines to be started
+  machine: string # Machines to be started
 ] {
-  assert (($machines | length) != 0) "A machine should be specified"
 
-  for machine in $machines {
     if $force { 
       main stop --kill=($kill) --machinectl=($machinectl) $machine
     }
 
-    logger info $"[($machine)] Starting"
-    if $machinectl {
-      try { machinectl -q start $machine }
-    } else {
-      try { systemctl start $"systemd-nspawn@($machine)" }
+    logger info $"Starting ($machine)"
+    try {
+      if $machinectl {
+        machinectl start $machine
+      } else {
+        systemctl -q start $"systemd-nspawn@($machine)"
+      }
+    } catch {
+      error make -u {
+        msg: $"Failed starting machine ($machine)"
+        help: $"Check journalctl -e -u systemd-nspawn@($machine).service for exit status"
+      }
     }
-  }
+    logger info "Machine successfully started"
 }
+
 # Stop a machine
 export def "main stop" [
-  --machinectl (-m) = true # Use machinectl for operations
+  --machinectl (-m) = false # Use machinectl for operations
   --kill (-k) # Send sigkill to systemd-nspawn unit for machine
-  ...machines: string # Machines to be started
+  machine: string # Machines to be started
 ] {
-  assert (($machines | length) != 0) "A machine should be specified"
 
   let stopcmd = (if $kill { "kill" } else { "stop" })
-  for machine in $machines {
     logger info $"Stopping ($machine)" 
-    if $machinectl {
-      machinectl -q $stopcmd $machine
-      return
+    try {
+      if $machinectl {
+        machinectl $stopcmd $machine 
+      } else {
+        systemctl $stopcmd $"systemd-nspawn@($machine)"
+      }
+    } catch {
+      error make -u {
+        msg: $"Failed stopping machine ($machine)"
+        help: $"Check journalctl -u systemd-nspawn@($machine).service for exit status"
+      }
     }
-    systemctl $stopcmd $"systemd-nspawn@($machine)"
-  }
+    logger info "Machine successfully stopped"
 }

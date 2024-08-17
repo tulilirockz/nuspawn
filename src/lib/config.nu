@@ -9,6 +9,7 @@ use manifest.nu [get_cached_file, get_config_path]
 export def "main config" [] {
   $"Usage: ($NAME) config <command>..."
 }
+
 # Applies a nspawn configuration file to selected machines
 export def "main config apply" [
   --config-root: path = $MACHINE_CONFIG_PATH # Path where machine configurations are stored
