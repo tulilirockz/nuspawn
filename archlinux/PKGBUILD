@@ -1,0 +1,36 @@
+# Maintainer: Tulip Blossom <tulilirockz@outlook.com>
+
+pkgname=nuspawn
+pkgver=0.9.0
+pkgrel=1
+pkgdesc='Distrobox-like wrapper for Systemd-Nspawn and Machinectl written in Nushell'
+arch=('x86_64' 'i686' 'armv6h' 'armv7h')
+url='https://codeberg.org/tulilirockz/${pkgname}'
+license=('BSD-3-Clause')
+depends=('nushell', 'systemd')
+makedepends=('git', 'scdoc')
+provides=("$pkgname=$pkgver")
+source=("$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+	printf $pkgver
+}
+
+build() {
+	cd "${pkgname}"
+	mkdir -p %{buildroot}%{_libexecdir}/%{pname} %{buildroot}/%{_bindir}
+	mkdir -p "$pkgdir/usr/share/$pkgname"
+	
+	sed -i 's/\%GIT_COMMIT\%//g' src/lib/meta.nu
+	sed -i 's/\%VERSION\%/${pkgver}/g' src/lib/meta.nu
+	sed -i 's~\.\/lib~\/usr\/libexec/%{pname}~' src/${pkgname}
+}
+
+package() {
+	cd "${pkgname}"
+	install -D -m 0755 src/%{pname} %{buildroot}%{_bindir}/%{pname}
+	cp -r src/lib/* %{buildroot}%{_libexecdir}/%{pname}
+	install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" README.md
+	install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE
+}

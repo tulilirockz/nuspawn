@@ -81,6 +81,8 @@ export def --env "main pull" [
     return
   }
 
+  assert (($image != null) and ($tag != null)) "Both the machine's image and tag are necessary"
+
   let fetched_url = (
     if $from_url != null { $from_url } 
     else { $"($nspawnhub_url)/($image)/($tag)/($type)/image.($type).xz"})

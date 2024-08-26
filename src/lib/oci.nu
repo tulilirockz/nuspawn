@@ -12,8 +12,8 @@ export def "main oci pull" [
   --extract (-e) = true # Extract the image after fetching it
   --force (-f) # Force override if image already exists
   --machinectl (-m) = true # Use machinectl for operations
-  image: string # OCI image that will be fetched/stored
   name: string # Machine name that will be output from the image
+  image: string # OCI image that will be fetched/stored
 ] {
   try {
     run-external $runtime info | ignore

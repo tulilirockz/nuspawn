@@ -23,22 +23,24 @@ A [Nushell](https://nushell.sh) wrapper over systemd-nspawn and machinectl initi
 ```bash
 nuspawn remote list # Table of all the available distros on nspawnhub
 
-nuspawn pull --name $NAME $IMAGE $TAG # Pull your machine from 
+nuspawn pull $NAME $IMAGE $TAG # Pull your machine from NspawnHub or other hosts
 nuspawn oci pull $NAME:$TAG # You can also pull OCI images from DockerHub or anywhere else to get a machine
+# Recommented OCI images are the [Toolbx Community Images](https://github.com/toolbx-images/images) and [Universal Blue's distrobox images](https://github.com/ublue-os/toolboxes)
 
-nuspawn setup $NAME # (optional) Sets up networking, users and other things in the machine manually if necessary (you should have networking by default)
+nuspawn enter $NAME # Run the machine in your current CLI
 
-nuspawn enter $NAME
+# If something does not work at first, you can use the setup handler to set up everything manually in the container
+nuspawn setup all $NAME
 ```
 
 ### Status of the machines
 
 You can check machine data through these troubleshooting commands 
 ```bash
-nuspawn status # Which machines are actually running at any point
-nuspawn log # Fancy table of the systemd journal in the machine
-nuspawn top # top-like TUI with machine processes
-nuspawn ps # Lists all processes in the machine + control groups (requires systemd in the machine + --boot flag)
+nuspawn ps # Lists all machines currently running and their statuses
+nuspawn logs # Fancy table of the systemd journal in the machine
+nuspawn top-tui # top-like TUI with machine processes
+nuspawn top # Lists all processes in the machine + control groups (requires systemd in the machine + --boot flag)
 ```
 
 ### Configuring machines

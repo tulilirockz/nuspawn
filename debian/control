@@ -1,0 +1,22 @@
+Source: nuspawn
+Section: utils
+Prority: optional
+Maintainer: Tulip Blossom <tulilirockz@outlook.com>
+Rules-Requires-Root: no
+Build-Depends:
+  scdoc
+Standards-Version: 1.0.0
+Homepage: https://codeberg.org/tulilrockz/nuspawn
+Vcs-Browser: https://codeberg.org/tulilrockz/nuspawn
+Vcs-Git: https://codeberg.org/tulilrockz/nuspawn
+
+Package: nuspawn
+Section: utils
+Architecture: all
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ systemd
+ nushell
+Description: Distrobox-like wrapper for Systemd-Nspawn and Machinectl written in Nushell
+
